@@ -39,6 +39,12 @@ dependencies {
 
 	// AOP
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+	// Swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.9'
+
+	// Redis
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }
 
 tasks.named('test') {
