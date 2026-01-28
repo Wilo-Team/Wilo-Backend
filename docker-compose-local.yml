@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: wilo-mysql
+    ports:
+      - "3307:3306"   # 다른 프로젝트랑 안겹치게 우선 로컬쪽은 3307로 설정
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: wilo
+      MYSQL_USER: wilo
+      MYSQL_PASSWORD: wilo1234
+      TZ: Asia/Seoul
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    volumes:
+      - wilo-mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2
+    container_name: wilo-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - wilo-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  wilo-mysql-data:
+  wilo-redis-data:
