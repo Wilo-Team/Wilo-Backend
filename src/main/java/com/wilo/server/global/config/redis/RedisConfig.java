@@ -7,27 +7,32 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.context.annotation.Profile;
 import org.springframework.data.redis.connection.RedisPassword;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.repository.configuration.EnableRedisRepositories;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.util.StringUtils;
 
 @Configuration
-@EnableRedisRepositories
+@Profile("!test")
 public class RedisConfig {
 
-    @Value("${spring.data.redis.host}")
-    private String host;
+    private final String host;
+    private final int port;
+    private final String password;
 
-    @Value("${spring.data.redis.port}")
-    private int port;
-
-    @Value("${spring.data.redis.password:}")
-    private String password;
+    public RedisConfig(
+            @Value("${spring.data.redis.host}") String host,
+            @Value("${spring.data.redis.port}") int port,
+            @Value("${spring.data.redis.password:}") String password
+    ) {
+        this.host = host;
+        this.port = port;
+        this.password = password;
+    }
 
     @Bean
     public LettuceConnectionFactory redisConnectionFactory() {
@@ -43,9 +48,11 @@ public class RedisConfig {
 
     @Bean
     @Primary
-    public RedisTemplate<String, Object> redisTemplate() {
+    public RedisTemplate<String, Object> redisTemplate(
+            LettuceConnectionFactory redisConnectionFactory
+    ) {
         RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(redisConnectionFactory());
+        template.setConnectionFactory(redisConnectionFactory);
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
@@ -59,6 +66,7 @@ public class RedisConfig {
         template.setHashKeySerializer(new StringRedisSerializer());
         template.setHashValueSerializer(serializer);
 
+        template.afterPropertiesSet();
         return template;
     }
 }
