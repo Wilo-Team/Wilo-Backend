@@ -7,10 +7,10 @@ services:
     ports:
       - "3307:3306"   # 다른 프로젝트랑 안겹치게 우선 로컬쪽은 3307로 설정
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: wilo
-      MYSQL_USER: wilo
-      MYSQL_PASSWORD: wilo1234
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
       TZ: Asia/Seoul
     command:
       - --character-set-server=utf8mb4
