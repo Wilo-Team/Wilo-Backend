@@ -77,10 +77,10 @@ services:
       - wilo-network
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 30s
 
   # Spring Boot Application - PRODUCTION (Green)
   app-prod-green:
@@ -115,10 +115,10 @@ services:
       - wilo-network
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
-      interval: 30s
+      interval: 10s
       timeout: 10s
       retries: 3
-      start_period: 60s
+      start_period: 30s
     profiles:
       - green  # 기본적으로는 비활성화, 배포 시에만 활성화
 
