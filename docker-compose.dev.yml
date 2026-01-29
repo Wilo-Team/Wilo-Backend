@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  # MySQL Database - DEVELOPMENT
+  mysql-dev:
+    image: mysql:8.0
+    container_name: wilo-mysql-dev
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: wilo_db_dev
+      TZ: Asia/Seoul
+    ports:
+      - "3309:3306"  # 외부 포트 3309로 노출
+    volumes:
+      - mysql_dev_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+09:00
+    networks:
+      - wilo-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache - DEVELOPMENT (리소스 제한 적용)
+  redis-dev:
+    image: redis:7.2-alpine
+    container_name: wilo-redis-dev
+    restart: unless-stopped
+    ports:
+      - "6392:6379"  # 외부 포트 6392로 노출 (컨테이너 내부는 6379)
+    volumes:
+      - redis_dev_data:/data
+    networks:
+      - wilo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # 개발 환경 Redis는 메모리 제한을 더 작게 설정
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+
+  # Spring Boot Application - DEVELOPMENT
+  app-dev:
+    image: ${DOCKER_USERNAME}/wilo:dev-latest
+    container_name: wilo-app-dev
+    restart: unless-stopped
+    ports:
+      - "8092:8080"  # 개발 서버는 8092 포트로 외부 노출
+    environment:
+      TZ: Asia/Seoul
+      SPRING_PROFILES_ACTIVE: dev
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-dev:3306/wilo_db_dev?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis-dev
+      SPRING_DATA_REDIS_PORT: 6379
+      # 환경 변수
+      JWT_ACCESS_TOKEN_SECRET: ${JWT_ACCESS_TOKEN_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
+      JWT_REFRESH_TOKEN_SECRET: ${JWT_REFRESH_TOKEN_SECRET}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
+    volumes:
+      - app_dev_logs:/app/logs
+    depends_on:
+      mysql-dev:
+        condition: service_healthy
+      redis-dev:
+        condition: service_healthy
+    networks:
+      - wilo-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+networks:
+  wilo-network:
+    driver: bridge
+    name: wilo-network  # prod와 같은 네트워크 이름 사용
+
+volumes:
+  mysql_dev_data:
+    driver: local
+  redis_dev_data:
+    driver: local
+  app_dev_logs:
+    driver: local
