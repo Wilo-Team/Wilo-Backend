@@ -129,12 +129,13 @@ jobs:
           healthy=false
 
           while [ $elapsed -lt $timeout ]; do
-            if docker ps | grep "wilo-app-prod-$TARGET" | grep -q "healthy"; then
+            HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' wilo-app-prod-$TARGET 2>/dev/null || echo "none")
+            if [ "$HEALTH_STATUS" = "healthy" ]; then
               echo "$TARGET environment is healthy!"
               healthy=true
               break
             fi
-            echo "Waiting... ($elapsed seconds)"
+            echo "Waiting... ($elapsed seconds) - Current status: $HEALTH_STATUS"
             sleep 5
             elapsed=$((elapsed + 5))
           done

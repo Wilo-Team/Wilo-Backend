@@ -89,15 +89,25 @@ jobs:
           echo "Waiting for development application to be healthy..."
           timeout=60
           elapsed=0
+          healthy=false
+
           while [ $elapsed -lt $timeout ]; do
-            if docker-compose -f docker-compose.dev.yml --env-file .env.dev ps app-dev | grep -q "healthy"; then
+            HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' wilo-app-dev 2>/dev/null || echo "none")
+            if [ "$HEALTH_STATUS" = "healthy" ]; then
               echo "Development application is healthy!"
+              healthy=true
               break
             fi
-            echo "Waiting... ($elapsed seconds)"
+            echo "Waiting... ($elapsed seconds) - Current status: $HEALTH_STATUS"
             sleep 5
             elapsed=$((elapsed + 5))
           done
+
+          if [ "$healthy" = false ]; then
+            echo "ERROR: Development application failed to become healthy within $timeout seconds"
+            docker-compose -f docker-compose.dev.yml logs --tail=100 app-dev
+            exit 1
+          fi
 
           # 컨테이너 상태 확인
           docker-compose -f docker-compose.dev.yml --env-file .env.dev ps
