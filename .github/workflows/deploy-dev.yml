@@ -40,6 +40,8 @@ jobs:
       # Gradle 빌드 (테스트 제외)
       - name: Build with Gradle
         run: ./gradlew clean build -x test
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         shell: bash
 
       # Docker 이미지 빌드 (DEVELOPMENT 태그)
