@@ -1,5 +1,6 @@
 package com.wilo.server.global.aop;
 
+import io.sentry.Sentry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -45,6 +46,8 @@ public class LoggingAspect {
                 ex.getMessage(),
                 ex
         );
+
+        Sentry.captureException(ex);
     }
 
     private String safeArgs(JoinPoint joinPoint) {
