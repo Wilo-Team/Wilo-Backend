@@ -1,0 +1,113 @@
+name: Deploy to Development Server (Mac Mini)
+
+on:
+  push:
+    branches: ["develop"]  # develop 브랜치에 푸시될 때 개발 배포
+  workflow_dispatch:  # 수동 실행 가능
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-deploy-dev:
+    runs-on: self-hosted  # Mac Mini의 Self-hosted Runner 사용
+
+    steps:
+      # 1. 코드 체크아웃
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. JDK 17 설정
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      # application-dev.yml 생성 (개발 환경 설정)
+      - name: Create application-dev.yml
+        run: |
+          mkdir -p ./src/main/resources
+          echo "${{ secrets.APPLICATION_DEV }}" > ./src/main/resources/application.yml
+        shell: bash
+
+      # Gradle 빌드 권한 부여
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+        shell: bash
+
+      # Gradle 빌드 (테스트 제외)
+      - name: Build with Gradle
+        run: ./gradlew clean build -x test
+        shell: bash
+
+      # Docker 이미지 빌드 (DEVELOPMENT 태그)
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ secrets.DOCKER_USERNAME }}/wilo:dev-latest .
+          docker tag ${{ secrets.DOCKER_USERNAME }}/wilo:dev-latest ${{ secrets.DOCKER_USERNAME }}/wilo:dev-${{ github.sha }}
+        shell: bash
+
+      # Docker Hub에 푸시
+      - name: Push to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
+          docker push ${{ secrets.DOCKER_USERNAME }}/wilo:dev-latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/wilo:dev-${{ github.sha }}
+        shell: bash
+
+      # .env 파일 생성 (DEVELOPMENT)
+      - name: Create .env file
+        run: |
+          cat > .env.dev << EOF
+          DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          JWT_ACCESS_TOKEN_SECRET=${{ secrets.JWT_ACCESS_TOKEN_SECRET }}
+          JWT_ACCESS_TOKEN_EXPIRATION=1800000
+          JWT_REFRESH_TOKEN_SECRET=${{ secrets.JWT_REFRESH_TOKEN_SECRET }}
+          JWT_REFRESH_TOKEN_EXPIRATION=604800000
+          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+          EOF
+        shell: bash
+
+      # Docker Compose로 배포 (DEVELOPMENT)
+      - name: Deploy with Docker Compose
+        run: |
+          # MySQL과 Redis 시작 (개발 환경 전용)
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d mysql-dev redis-dev
+
+          # Spring Boot 개발 앱만 재시작
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev stop app-dev || true
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev rm -f app-dev || true
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d app-dev
+
+          # 헬스체크 대기 (최대 2분)
+          echo "Waiting for development application to be healthy..."
+          timeout=60
+          elapsed=0
+          while [ $elapsed -lt $timeout ]; do
+            if docker-compose -f docker-compose.dev.yml --env-file .env.dev ps app-dev | grep -q "healthy"; then
+              echo "Development application is healthy!"
+              break
+            fi
+            echo "Waiting... ($elapsed seconds)"
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
+
+          # 컨테이너 상태 확인
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev ps
+
+          # 로그 출력 (마지막 50줄)
+          echo "=== Development Application Logs ==="
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev logs --tail=50 app-dev
+        shell: bash
+
+      # 12. 오래된 Docker 이미지 정리
+      - name: Clean up old Docker images
+        run: |
+          docker image prune -f --filter "until=24h"
+        shell: bash
+        continue-on-error: true
