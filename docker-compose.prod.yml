@@ -1,0 +1,135 @@
+version: '3.8'
+
+services:
+  # MySQL Database - PRODUCTION
+  mysql-prod:
+    image: mysql:8.0
+    container_name: wilo-mysql-prod
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: wilo_db_prod
+      TZ: Asia/Seoul
+    ports:
+      - "3308:3306" # 외부 포트 3309로 노출
+    volumes:
+      - mysql_prod_data:/var/lib/mysql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+09:00
+    networks:
+      - wilo-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache - PRODUCTION
+  redis-prod:
+    image: redis:7.2-alpine
+    container_name: wilo-redis-prod
+    restart: unless-stopped
+    ports:
+      - "6391:6379"
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - wilo-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+  # Spring Boot Application - PRODUCTION (Blue)
+  app-prod-blue:
+    image: ${DOCKER_USERNAME}/wilo:prod-latest
+    container_name: wilo-app-prod-blue
+    restart: unless-stopped
+    ports:
+      - "8090:8080"  # Blue 포트 (외부 8090 -> 컨테이너 내부 8080)
+    environment:
+      TZ: Asia/Seoul
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-prod:3306/wilo_db_prod?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis-prod
+      SPRING_DATA_REDIS_PORT: 6379
+      # 환경 변수
+      JWT_ACCESS_TOKEN_SECRET: ${JWT_ACCESS_TOKEN_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
+      JWT_REFRESH_TOKEN_SECRET: ${JWT_REFRESH_TOKEN_SECRET}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
+    volumes:
+      - app_prod_logs:/app/logs
+    depends_on:
+      mysql-prod:
+        condition: service_healthy
+      redis-prod:
+        condition: service_healthy
+    networks:
+      - wilo-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Spring Boot Application - PRODUCTION (Green)
+  app-prod-green:
+    image: ${DOCKER_USERNAME}/wilo:prod-latest
+    container_name: wilo-app-prod-green
+    restart: unless-stopped
+    ports:
+      - "8091:8080"  # Green 포트 (외부 8091 -> 컨테이너 내부 8080)
+    environment:
+      TZ: Asia/Seoul
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql-prod:3306/wilo_db_prod?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      SPRING_DATA_REDIS_HOST: redis-prod
+      SPRING_DATA_REDIS_PORT: 6379
+      # 환경 변수
+      JWT_ACCESS_TOKEN_SECRET: ${JWT_ACCESS_TOKEN_SECRET}
+      JWT_ACCESS_TOKEN_EXPIRATION: ${JWT_ACCESS_TOKEN_EXPIRATION}
+      JWT_REFRESH_TOKEN_SECRET: ${JWT_REFRESH_TOKEN_SECRET}
+      JWT_REFRESH_TOKEN_EXPIRATION: ${JWT_REFRESH_TOKEN_EXPIRATION}
+      SENTRY_DSN: ${SENTRY_DSN}
+      SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
+    volumes:
+      - app_prod_logs:/app/logs
+    depends_on:
+      mysql-prod:
+        condition: service_healthy
+      redis-prod:
+        condition: service_healthy
+    networks:
+      - wilo-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    profiles:
+      - green  # 기본적으로는 비활성화, 배포 시에만 활성화
+
+networks:
+  wilo-network:
+    driver: bridge
+
+volumes:
+  mysql_prod_data:
+    driver: local
+  redis_prod_data:
+    driver: local
+  app_prod_logs:
+    driver: local
