@@ -34,8 +34,9 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
             @ApiResponse(responseCode = "409", description = "이메일 또는 닉네임 중복", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
-    public CommonResponse<TokenResponseDto> signUp(@Valid @RequestBody SignUpRequestDto request) {
-        return CommonResponse.success(authService.signUpAndIssueToken(request));
+    public CommonResponse<String> signUp(@Valid @RequestBody SignUpRequestDto request) {
+        authService.signUpAndIssueToken(request);
+        return CommonResponse.success("회원가입이 완료되었습니다.");
     }
 
     @PostMapping("/login")
