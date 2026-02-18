@@ -46,6 +46,7 @@ public class SecurityConfig {
                         authorizeRequests
                                 .requestMatchers("/", "/robots.txt", "/home","/images/**", "/login", "/css/**", "/js/**", "/swagger-ui/**", "/v3/api-docs/**", "/actuator/**").permitAll()
                                 .requestMatchers("/api/auth/**").permitAll()
+                                .requestMatchers("/api/v1/chatbot-types/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .logout(logout -> logout
