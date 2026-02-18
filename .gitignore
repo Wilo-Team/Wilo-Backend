@@ -42,3 +42,4 @@ application-dev.yml
 application-prod.yml
 
 .env
+**/db/migration/
