@@ -1,4 +1,4 @@
-package com.wilo.server.global.auth;
+package com.wilo.server.auth.handler;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

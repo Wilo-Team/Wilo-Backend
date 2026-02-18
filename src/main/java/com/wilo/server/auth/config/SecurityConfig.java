@@ -1,7 +1,7 @@
-package com.wilo.server.global.config;
+package com.wilo.server.auth.config;
 
-import com.wilo.server.global.auth.CustomAccessDeniedHandler;
-import com.wilo.server.global.auth.CustomAuthenticationEntryPoint;
+import com.wilo.server.auth.handler.CustomAccessDeniedHandler;
+import com.wilo.server.auth.handler.CustomAuthenticationEntryPoint;
 import com.wilo.server.global.config.security.jwt.JwtAuthenticationFilter;
 import com.wilo.server.global.config.security.jwt.JwtTokenProvider;
 import java.util.List;
