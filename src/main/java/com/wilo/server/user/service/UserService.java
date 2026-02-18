@@ -4,7 +4,7 @@ import com.wilo.server.files.service.FileService;
 import com.wilo.server.files.exception.FileErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.user.dto.UserResponseDto;
-import com.wilo.server.user.dto.UserRegisterDto;
+import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.error.UserErrorCase;
 import com.wilo.server.user.repository.UserRepository;
@@ -29,7 +29,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDto updateUserProfile(Long userId, UserRegisterDto request) {
+    public UserResponseDto updateUserProfile(Long userId, UserUpdateRequestDto request) {
         User user = getUserOrThrow(userId);
 
         if (!user.getNickname().equals(request.nickname()) && userRepository.existsByNickname(request.nickname())) {
@@ -41,7 +41,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponseDto updateProfileImage(Long userId, MultipartFile image) {
+    public String updateProfileImage(Long userId, MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw ApplicationException.from(FileErrorCase.FILE_UPLOAD_FAILED);
         }
@@ -61,7 +61,7 @@ public class UserService {
             }
         }
 
-        return UserResponseDto.from(user);
+        return uploadedImageUrl;
     }
 
     private User getUserOrThrow(Long userId) {

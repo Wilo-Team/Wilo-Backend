@@ -2,7 +2,7 @@ package com.wilo.server.user.controller;
 
 import com.wilo.server.global.response.CommonResponse;
 import com.wilo.server.user.dto.UserResponseDto;
-import com.wilo.server.user.dto.UserRegisterDto;
+import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -50,7 +50,7 @@ public class UserController {
             @ApiResponse(responseCode = "409", description = "닉네임 중복", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<UserResponseDto> updateUserProfile(
-            @Valid @RequestBody UserRegisterDto request
+            @Valid @RequestBody UserUpdateRequestDto request
     ) {
         Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return CommonResponse.success(userService.updateUserProfile(userId, request));
@@ -64,7 +64,7 @@ public class UserController {
             @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
             @ApiResponse(responseCode = "404", description = "유저 없음", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
-    public CommonResponse<UserResponseDto> updateProfileImage(
+    public CommonResponse<String> updateProfileImage(
             @RequestParam("image") MultipartFile image
     ) {
         Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
