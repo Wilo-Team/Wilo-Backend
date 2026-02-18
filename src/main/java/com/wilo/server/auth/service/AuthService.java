@@ -1,11 +1,11 @@
 package com.wilo.server.auth.service;
 
-import com.wilo.server.auth.dto.AuthResult;
-import com.wilo.server.auth.dto.LoginRequest;
-import com.wilo.server.auth.dto.SignUpRequest;
-import com.wilo.server.auth.dto.TokenPair;
-import com.wilo.server.auth.dto.UserSummaryResponse;
+import com.wilo.server.auth.dto.LoginRequestDto;
+import com.wilo.server.auth.dto.SignUpRequestDto;
+import com.wilo.server.auth.dto.TokenRequestDto;
+import com.wilo.server.auth.dto.TokenResponseDto;
 import com.wilo.server.auth.error.AuthErrorCase;
+import com.wilo.server.auth.repository.RefreshTokenRepository;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
 import com.wilo.server.global.config.security.jwt.JwtTokenProvider;
@@ -20,11 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
     @Transactional
-    public AuthResult signUp(SignUpRequest request) {
+    public TokenResponseDto signUpAndIssueToken(SignUpRequestDto request) {
 
         if (userRepository.existsByEmail(request.email())) {
             throw ApplicationException.from(AuthErrorCase.EMAIL_ALREADY_EXISTS);
@@ -44,12 +45,11 @@ public class AuthService {
                         .build()
         );
 
-        TokenPair tokenPair = issueTokens(user.getId());
-        return new AuthResult(UserSummaryResponse.from(user), tokenPair);
+        return issueAndSaveTokens(user.getId());
     }
 
-    @Transactional(readOnly = true)
-    public AuthResult login(LoginRequest request) {
+    @Transactional
+    public TokenResponseDto loginAndIssueToken(LoginRequestDto request) {
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> ApplicationException.from(AuthErrorCase.INVALID_CREDENTIALS));
 
@@ -57,14 +57,58 @@ public class AuthService {
             throw ApplicationException.from(AuthErrorCase.INVALID_CREDENTIALS);
         }
 
-        TokenPair tokenPair = issueTokens(user.getId());
-        return new AuthResult(UserSummaryResponse.from(user), tokenPair);
+        return issueAndSaveTokens(user.getId());
     }
 
-    private TokenPair issueTokens(Long userId) {
-        return new TokenPair(
-                jwtTokenProvider.generateAccessToken(userId),
-                jwtTokenProvider.generateRefreshToken(userId)
-        );
+    @Transactional
+    public TokenResponseDto refreshToken(TokenRequestDto tokenRequestDto) {
+        String refreshToken = tokenRequestDto.getRefreshToken();
+
+        if (refreshToken == null || refreshToken.isBlank() || !jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            throw ApplicationException.from(AuthErrorCase.INVALID_REFRESH_TOKEN);
+        }
+
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+
+        String savedRefreshToken = refreshTokenRepository.findByUserId(userId)
+                .orElseThrow(() -> ApplicationException.from(AuthErrorCase.INVALID_REFRESH_TOKEN));
+
+        if (!refreshToken.equals(savedRefreshToken)) {
+            throw ApplicationException.from(AuthErrorCase.INVALID_REFRESH_TOKEN);
+        }
+
+        return issueAndSaveTokens(userId);
+    }
+
+    @Transactional
+    public void logout(TokenRequestDto tokenRequestDto) {
+        if (tokenRequestDto == null || tokenRequestDto.getRefreshToken() == null) {
+            return;
+        }
+
+        String refreshToken = tokenRequestDto.getRefreshToken();
+        if (!jwtTokenProvider.validateRefreshToken(refreshToken)) {
+            return;
+        }
+
+        Long userId = jwtTokenProvider.getUserId(refreshToken);
+        refreshTokenRepository.deleteByUserId(userId);
+    }
+
+    private TokenResponseDto issueAndSaveTokens(Long userId) {
+        String accessToken = jwtTokenProvider.generateAccessToken(userId);
+        String refreshToken = jwtTokenProvider.generateRefreshToken(userId);
+
+        long refreshTtlMillis = jwtTokenProvider.getTokenExpiry(refreshToken) - System.currentTimeMillis();
+        if (refreshTtlMillis <= 0) {
+            throw ApplicationException.from(AuthErrorCase.INVALID_REFRESH_TOKEN);
+        }
+
+        refreshTokenRepository.save(userId, refreshToken, refreshTtlMillis);
+
+        return TokenResponseDto.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .build();
     }
 }

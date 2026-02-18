@@ -1,9 +1,9 @@
 package com.wilo.server.auth.controller;
 
-import com.wilo.server.auth.dto.AuthResponse;
-import com.wilo.server.auth.dto.AuthResult;
-import com.wilo.server.auth.dto.LoginRequest;
-import com.wilo.server.auth.dto.SignUpRequest;
+import com.wilo.server.auth.dto.LoginRequestDto;
+import com.wilo.server.auth.dto.SignUpRequestDto;
+import com.wilo.server.auth.dto.TokenRequestDto;
+import com.wilo.server.auth.dto.TokenResponseDto;
 import com.wilo.server.auth.service.AuthService;
 import com.wilo.server.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,11 +13,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,9 +25,6 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Auth", description = "회원 인증 API")
 public class AuthController {
 
-    private static final String ACCESS_TOKEN_COOKIE_NAME = "accessToken";
-    private static final String REFRESH_TOKEN_COOKIE_NAME = "refreshToken";
-
     private final AuthService authService;
 
     @PostMapping("/signup")
@@ -41,17 +34,8 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
             @ApiResponse(responseCode = "409", description = "이메일 또는 닉네임 중복", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
-    public ResponseEntity<CommonResponse<AuthResponse>> signUp(@Valid @RequestBody SignUpRequest request) {
-
-        AuthResult result = authService.signUp(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, createTokenCookie(ACCESS_TOKEN_COOKIE_NAME, result.tokens().accessToken(), Duration.ofHours(1)).toString())
-                .header(HttpHeaders.SET_COOKIE, createTokenCookie(REFRESH_TOKEN_COOKIE_NAME, result.tokens().refreshToken(), Duration.ofDays(14)).toString())
-                .body(CommonResponse.success(new AuthResponse(
-                        result.tokens().accessToken(),
-                        result.tokens().refreshToken(),
-                        result.user()
-                )));
+    public CommonResponse<TokenResponseDto> signUp(@Valid @RequestBody SignUpRequestDto request) {
+        return CommonResponse.success(authService.signUpAndIssueToken(request));
     }
 
     @PostMapping("/login")
@@ -61,17 +45,18 @@ public class AuthController {
             @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
             @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
-    public ResponseEntity<CommonResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
+    public CommonResponse<TokenResponseDto> login(@Valid @RequestBody LoginRequestDto request) {
+        return CommonResponse.success(authService.loginAndIssueToken(request));
+    }
 
-        AuthResult result = authService.login(request);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, createTokenCookie(ACCESS_TOKEN_COOKIE_NAME, result.tokens().accessToken(), Duration.ofHours(1)).toString())
-                .header(HttpHeaders.SET_COOKIE, createTokenCookie(REFRESH_TOKEN_COOKIE_NAME, result.tokens().refreshToken(), Duration.ofDays(14)).toString())
-                .body(CommonResponse.success(new AuthResponse(
-                        result.tokens().accessToken(),
-                        result.tokens().refreshToken(),
-                        result.user()
-                )));
+    @PostMapping("/refresh")
+    @Operation(summary = "토큰 재발급", description = "유효한 리프레시 토큰으로 access/refresh 토큰을 재발급합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "재발급 성공"),
+            @ApiResponse(responseCode = "401", description = "유효하지 않은 리프레시 토큰", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<TokenResponseDto> refreshToken(@RequestBody TokenRequestDto tokenRequestDto) {
+        return CommonResponse.success(authService.refreshToken(tokenRequestDto));
     }
 
     @PostMapping("/logout")
@@ -79,30 +64,8 @@ public class AuthController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "로그아웃 성공")
     })
-    public ResponseEntity<CommonResponse<?>> logout() {
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, clearCookie(ACCESS_TOKEN_COOKIE_NAME).toString())
-                .header(HttpHeaders.SET_COOKIE, clearCookie(REFRESH_TOKEN_COOKIE_NAME).toString())
-                .body(CommonResponse.success());
-    }
-
-    private ResponseCookie createTokenCookie(String name, String value, Duration maxAge) {
-        return ResponseCookie.from(name, value)
-                .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(maxAge)
-                .build();
-    }
-
-    private ResponseCookie clearCookie(String name) {
-        return ResponseCookie.from(name, "")
-                .httpOnly(true)
-                .secure(false)
-                .sameSite("Lax")
-                .path("/")
-                .maxAge(Duration.ZERO)
-                .build();
+    public CommonResponse<String> logout(@RequestBody(required = false) TokenRequestDto tokenRequestDto) {
+        authService.logout(tokenRequestDto);
+        return CommonResponse.success("로그아웃 되었습니다.");
     }
 }

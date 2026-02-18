@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wilo.server.auth.repository.RefreshTokenRepository;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,8 +16,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -35,6 +36,9 @@ class AuthControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @MockitoBean
+    private RefreshTokenRepository refreshTokenRepository;
+
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
@@ -52,13 +56,11 @@ class AuthControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/auth/signup")
+                mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data.user.email").value("signup@example.com"))
-                .andExpect(jsonPath("$.data.user.nickname").value("signupUser"))
                 .andExpect(jsonPath("$.data.accessToken").isString())
                 .andExpect(jsonPath("$.data.refreshToken").isString());
     }
@@ -112,22 +114,16 @@ class AuthControllerTest {
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data.user.nickname").value("loginUser"))
                 .andExpect(jsonPath("$.data.accessToken").isString())
                 .andExpect(jsonPath("$.data.refreshToken").isString());
     }
 
     @Test
-    void logout_success_clearsCookies() throws Exception {
-        MvcResult result = mockMvc.perform(post("/api/auth/logout"))
+    void logout_success() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"accessToken\":\"a\",\"refreshToken\":\"r\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("success"))
-                .andReturn();
-
-        String setCookieHeader = String.join("\n", result.getResponse().getHeaders("Set-Cookie"));
-
-        org.assertj.core.api.Assertions.assertThat(setCookieHeader).contains("accessToken=");
-        org.assertj.core.api.Assertions.assertThat(setCookieHeader).contains("refreshToken=");
-        org.assertj.core.api.Assertions.assertThat(setCookieHeader).contains("Max-Age=0");
+                .andExpect(jsonPath("$.message").value("success"));
     }
 }
