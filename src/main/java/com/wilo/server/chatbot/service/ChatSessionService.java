@@ -22,7 +22,7 @@ public class ChatSessionService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatbotTypeRepository chatbotTypeRepository;
 
-    public ChatSessionCreateResponse createSession(ChatSessionCreateRequest request) {
+    public ChatSessionCreateResponse createSession(ChatSessionCreateRequest request, String guestIdHeader) {
 
         Long userId = extractUserIdIfAuthenticated();
 
@@ -35,10 +35,10 @@ public class ChatSessionService {
         if (userId != null) {
             session = ChatSession.createForUser(userId, chatbotType);
         } else {
-            String guestId = (request.getGuestId() == null || request.getGuestId().isBlank())
-                    ? UUID.randomUUID().toString()
-                    : request.getGuestId();
-
+            String guestId = normalizeGuestId(guestIdHeader);
+            if (guestId == null) {
+                throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+            }
             session = ChatSession.createForGuest(guestId, chatbotType);
         }
 
@@ -46,13 +46,17 @@ public class ChatSessionService {
         return ChatSessionCreateResponse.from(saved);
     }
 
+    private String normalizeGuestId(String guestIdHeader) {
+        if (guestIdHeader == null) return null;
+        String trimmed = guestIdHeader.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
     private Long extractUserIdIfAuthenticated() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || auth.getPrincipal() == null) { return null; }
+        if (auth == null || auth.getPrincipal() == null) return null;
 
-        if (auth.getPrincipal() instanceof Long userId) {
-            return userId;
-        }
+        if (auth.getPrincipal() instanceof Long userId) return userId;
         return null;
     }
 }
