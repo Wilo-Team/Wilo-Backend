@@ -70,6 +70,14 @@ public class JwtTokenProvider {
     }
 
     public boolean validateAccessToken(String token) {
+        return validateTokenByType(token, "access");
+    }
+
+    public boolean validateRefreshToken(String token) {
+        return validateTokenByType(token, "refresh");
+    }
+
+    private boolean validateTokenByType(String token, String tokenType) {
         try {
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(signingKey)
@@ -77,7 +85,7 @@ public class JwtTokenProvider {
                     .parseClaimsJws(token)
                     .getBody();
 
-            return "access".equals(claims.get("typ"));
+            return tokenType.equals(claims.get("typ"));
         } catch (JwtException | IllegalArgumentException e) {
             return false;
         }
