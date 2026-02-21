@@ -75,7 +75,7 @@ public class ChatSessionService {
         if (status == ChatSessionStatus.DELETED) {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
-        
+
         // size default=20, max=50
         int size = (request.size() == null) ? 20 : request.size();
         if (size < 1 || size > 50) {
