@@ -72,6 +72,10 @@ public class ChatSessionService {
             }
         }
 
+        if (status == ChatSessionStatus.DELETED) {
+            throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
+        }
+        
         // size default=20, max=50
         int size = (request.size() == null) ? 20 : request.size();
         if (size < 1 || size > 50) {
@@ -79,6 +83,10 @@ public class ChatSessionService {
         }
 
         Long cursor = request.cursor();
+
+        if (cursor != null && cursor <= 0) {
+            throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
+        }
 
         Pageable pageable = PageRequest.of(0, size + 1);
 
@@ -109,7 +117,7 @@ public class ChatSessionService {
     }
 
     private ChatSessionListItem toItem(ChatSession session) {
-        String preview = null;
+        String preview = session.getTitle();
 
         return ChatSessionListItem.builder()
                 .sessionId(session.getId())
