@@ -85,7 +85,7 @@ jobs:
         run: ./gradlew clean test --stacktrace --no-daemon
 
       - name: Build
-        run: ./gradlew build -x test -x sentryUploadSourceBundleJava -x sentryUploadSourceBundleKotlin --stacktrace --no-daemon
+        run: ./gradlew build -x test -x sentryUploadSourceBundleJava --stacktrace --no-daemon
 
       - name: Upload test reports
         if: always()
