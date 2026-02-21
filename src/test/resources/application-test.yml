@@ -1,4 +1,8 @@
 spring:
+
+  site:
+    url: http://localhost:8080
+
   datasource:
     url: jdbc:h2:mem:wilo-test;MODE=MySQL
     driver-class-name: org.h2.Driver
@@ -12,7 +16,7 @@ spring:
     open-in-view: false
     properties:
       hibernate:
-        format_sql: true
+        format_sql: false
         show_sql: false
 
   data:
@@ -26,11 +30,26 @@ spring:
     console:
       enabled: false
 
+
 logging:
   level:
     root: warn
+
 
 jwt:
   secret: ${JWT_SECRET:wilo-test-jwt-secret-32-bytes-required-for-validation}
   access-exp: 3600000
   refresh-exp: 1209600000
+
+
+cloud:
+  aws:
+    s3:
+      bucket: test-bucket
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+    credentials:
+      access-key: test
+      secret-key: test
