@@ -69,6 +69,20 @@ public class CommunityController {
         return CommonResponse.success(communityService.updatePost(userId, postId, request));
     }
 
+    @DeleteMapping("/posts/{postId}")
+    @Operation(summary = "게시글 삭제", description = "본인이 작성한 게시글을 삭제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "403", description = "작성자만 삭제 가능", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "404", description = "게시글 없음", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> deletePost(@PathVariable Long postId) {
+        Long userId = extractUserId();
+        communityService.deletePost(userId, postId);
+        return CommonResponse.success("게시글이 삭제되었습니다.");
+    }
+
     @GetMapping("/posts")
     @Operation(summary = "게시글 목록 조회", description = "카테고리별(미지정 시 홈 전체), 최신순/추천순, 검색어 기반으로 커서 페이지네이션 목록을 조회합니다.")
     @ApiResponses(value = {

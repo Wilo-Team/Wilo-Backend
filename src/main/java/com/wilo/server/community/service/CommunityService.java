@@ -111,6 +111,33 @@ public class CommunityService {
         return post.getId();
     }
 
+    @Transactional
+    public void deletePost(Long userId, Long postId) {
+        getUserOrThrow(userId);
+        CommunityPost post = getPostOrThrow(postId);
+
+        if (!post.getUser().getId().equals(userId)) {
+            throw ApplicationException.from(CommunityErrorCase.FORBIDDEN_POST_DELETE);
+        }
+
+        List<CommunityComment> comments = communityCommentRepository.findByPostIdOrderByCreatedAtAscIdAsc(postId);
+        if (!comments.isEmpty()) {
+            communityCommentRepository.deleteAll(comments);
+        }
+
+        List<CommunityPostImage> images = communityPostImageRepository.findByPostIdOrderBySortOrderAsc(postId);
+        if (!images.isEmpty()) {
+            communityPostImageRepository.deleteAll(images);
+        }
+
+        List<CommunityPostLike> likes = communityPostLikeRepository.findByPostId(postId);
+        if (!likes.isEmpty()) {
+            communityPostLikeRepository.deleteAll(likes);
+        }
+
+        communityPostRepository.delete(post);
+    }
+
     @Transactional(readOnly = true)
     public CommunityPostListResponseDto getPosts(
             CommunityCategory category,
