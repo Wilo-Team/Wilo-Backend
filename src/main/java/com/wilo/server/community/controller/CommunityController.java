@@ -36,7 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/community")
+@RequestMapping("/api/v1/community")
 @Tag(name = "Community", description = "커뮤니티 API")
 public class CommunityController {
 

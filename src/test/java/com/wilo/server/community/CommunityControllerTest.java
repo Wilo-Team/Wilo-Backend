@@ -76,7 +76,7 @@ class CommunityControllerTest {
                         .build()
         );
 
-        mockMvc.perform(get("/api/community/posts")
+        mockMvc.perform(get("/api/v1/community/posts")
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("success"))
@@ -102,7 +102,7 @@ class CommunityControllerTest {
             );
         }
 
-        MvcResult firstPageResult = mockMvc.perform(get("/api/community/posts")
+        MvcResult firstPageResult = mockMvc.perform(get("/api/v1/community/posts")
                         .param("size", "2"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(2))
@@ -113,7 +113,7 @@ class CommunityControllerTest {
         JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
         String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
 
-        mockMvc.perform(get("/api/community/posts")
+        mockMvc.perform(get("/api/v1/community/posts")
                         .param("size", "2")
                         .param("cursor", nextCursor))
                 .andExpect(status().isOk())
@@ -134,7 +134,7 @@ class CommunityControllerTest {
                         .build()
         );
 
-        MvcResult parentResult = mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+        MvcResult parentResult = mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -147,7 +147,7 @@ class CommunityControllerTest {
         JsonNode parentJson = objectMapper.readTree(parentResult.getResponse().getContentAsString());
         long parentCommentId = parentJson.path("data").path("id").asLong();
 
-        mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -156,7 +156,7 @@ class CommunityControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").value("답글"));
 
-        mockMvc.perform(get("/api/community/posts/{postId}", post.getId()))
+        mockMvc.perform(get("/api/v1/community/posts/{postId}", post.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.comments[0].content").value("부모 댓글"))
                 .andExpect(jsonPath("$.data.comments[0].replies[0].content").value("답글"))
@@ -175,13 +175,13 @@ class CommunityControllerTest {
                         .build()
         );
 
-        mockMvc.perform(post("/api/community/posts/{postId}/likes", post.getId())
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.liked").value(true))
                 .andExpect(jsonPath("$.data.likeCount").value(1));
 
-        mockMvc.perform(delete("/api/community/posts/{postId}/likes", post.getId())
+        mockMvc.perform(delete("/api/v1/community/posts/{postId}/likes", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.liked").value(false))
@@ -212,14 +212,14 @@ class CommunityControllerTest {
                 }
                 """;
 
-        mockMvc.perform(patch("/api/community/posts/{postId}", post.getId())
+        mockMvc.perform(patch("/api/v1/community/posts/{postId}", post.getId())
                         .with(authentication(new JwtAuthentication(author.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateRequest))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").value(post.getId()));
 
-        mockMvc.perform(get("/api/community/posts/{postId}", post.getId()))
+        mockMvc.perform(get("/api/v1/community/posts/{postId}", post.getId()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.title").value("수정 후 제목"))
                 .andExpect(jsonPath("$.data.content").value("수정 후 내용"))
@@ -249,7 +249,7 @@ class CommunityControllerTest {
                 }
                 """;
 
-        mockMvc.perform(patch("/api/community/posts/{postId}", post.getId())
+        mockMvc.perform(patch("/api/v1/community/posts/{postId}", post.getId())
                         .with(authentication(new JwtAuthentication(other.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateRequest))
@@ -269,12 +269,12 @@ class CommunityControllerTest {
                         .build()
         );
 
-        mockMvc.perform(delete("/api/community/posts/{postId}", post.getId())
+        mockMvc.perform(delete("/api/v1/community/posts/{postId}", post.getId())
                         .with(authentication(new JwtAuthentication(author.getId()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("success"));
 
-        mockMvc.perform(get("/api/community/posts/{postId}", post.getId()))
+        mockMvc.perform(get("/api/v1/community/posts/{postId}", post.getId()))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.errorCode").value(5001));
     }
@@ -292,7 +292,7 @@ class CommunityControllerTest {
                         .build()
         );
 
-        mockMvc.perform(delete("/api/community/posts/{postId}", post.getId())
+        mockMvc.perform(delete("/api/v1/community/posts/{postId}", post.getId())
                         .with(authentication(new JwtAuthentication(other.getId()))))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.errorCode").value(5006));
@@ -310,7 +310,7 @@ class CommunityControllerTest {
                         .build()
         );
 
-        MvcResult parentResult = mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+        MvcResult parentResult = mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"content\":\"부모 댓글\"}"))
@@ -318,7 +318,7 @@ class CommunityControllerTest {
                 .andReturn();
         long parentId = objectMapper.readTree(parentResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        MvcResult childResult = mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+        MvcResult childResult = mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -328,7 +328,7 @@ class CommunityControllerTest {
                 .andReturn();
         long childId = objectMapper.readTree(childResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
-        mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
