@@ -1,0 +1,48 @@
+spring:
+  site:
+    url: http://localhost:8080
+
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:127.0.0.1}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:wilo_ci}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:wilo}
+    password: ${MYSQL_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        show_sql: false
+
+  data:
+    redis:
+      host: ${SPRING_DATA_REDIS_HOST:127.0.0.1}
+      port: ${SPRING_DATA_REDIS_PORT:6379}
+
+  h2:
+    console:
+      enabled: false
+
+logging:
+  level:
+    root: warn
+
+jwt:
+  secret: ${JWT_SECRET:test-jwt-secret-minimum-32-bytes-required}
+  access-exp: 1800000
+  refresh-exp: 1209600000
+
+cloud:
+  aws:
+    s3:
+      bucket: ${CLOUD_AWS_S3_BUCKET:dummy-ci-bucket}
+    region:
+      static: ${CLOUD_AWS_REGION:ap-northeast-2}
+    stack:
+      auto: false
+    credentials:
+      access-key: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY:dummy}
+      secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY:dummy}

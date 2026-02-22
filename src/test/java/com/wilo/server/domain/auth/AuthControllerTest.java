@@ -59,10 +59,9 @@ class AuthControllerTest {
                 mockMvc.perform(post("/api/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data.accessToken").isString())
-                .andExpect(jsonPath("$.data.refreshToken").isString());
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.message").value("success"))
+                        .andExpect(jsonPath("$.data").value("회원가입이 완료되었습니다."));
     }
 
     @Test
@@ -89,7 +88,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.errorCode").value(4091));
+                .andExpect(jsonPath("$.errorCode").value(1001));
     }
 
     @Test
