@@ -8,6 +8,7 @@ import com.wilo.server.community.dto.CommunityPostCreateRequestDto;
 import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
 import com.wilo.server.community.dto.CommunityPostListResponseDto;
 import com.wilo.server.community.dto.CommunityPostSummaryDto;
+import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
 import com.wilo.server.community.entity.CommunityCategory;
 import com.wilo.server.community.entity.CommunityComment;
 import com.wilo.server.community.entity.CommunityPost;
@@ -61,6 +62,38 @@ public class CommunityService {
                         .content(request.content())
                         .build()
         );
+
+        List<String> imageUrls = request.imageUrls();
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            List<CommunityPostImage> images = new ArrayList<>();
+            for (int i = 0; i < imageUrls.size(); i++) {
+                images.add(CommunityPostImage.builder()
+                        .post(post)
+                        .imageUrl(imageUrls.get(i))
+                        .sortOrder(i)
+                        .build());
+            }
+            communityPostImageRepository.saveAll(images);
+        }
+
+        return post.getId();
+    }
+
+    @Transactional
+    public Long updatePost(Long userId, Long postId, CommunityPostUpdateRequestDto request) {
+        getUserOrThrow(userId);
+        CommunityPost post = getPostOrThrow(postId);
+
+        if (!post.getUser().getId().equals(userId)) {
+            throw ApplicationException.from(CommunityErrorCase.FORBIDDEN_POST_UPDATE);
+        }
+
+        post.updatePost(request.category(), request.title(), request.content());
+
+        List<CommunityPostImage> existingImages = communityPostImageRepository.findByPostIdOrderBySortOrderAsc(postId);
+        if (!existingImages.isEmpty()) {
+            communityPostImageRepository.deleteAll(existingImages);
+        }
 
         List<String> imageUrls = request.imageUrls();
         if (imageUrls != null && !imageUrls.isEmpty()) {
