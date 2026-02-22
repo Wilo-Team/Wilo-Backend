@@ -7,6 +7,7 @@ import com.wilo.server.community.dto.CommunityLikeResponseDto;
 import com.wilo.server.community.dto.CommunityPostCreateRequestDto;
 import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
 import com.wilo.server.community.dto.CommunityPostListResponseDto;
+import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
 import com.wilo.server.community.entity.CommunityCategory;
 import com.wilo.server.community.entity.CommunityPostSortType;
 import com.wilo.server.community.service.CommunityService;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -48,6 +50,23 @@ public class CommunityController {
     public CommonResponse<Long> createPost(@Valid @RequestBody CommunityPostCreateRequestDto request) {
         Long userId = extractUserId();
         return CommonResponse.success(communityService.createPost(userId, request));
+    }
+
+    @PatchMapping("/posts/{postId}")
+    @Operation(summary = "게시글 수정", description = "본인이 작성한 게시글의 카테고리/제목/내용/이미지를 수정합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "수정 성공"),
+            @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "403", description = "작성자만 수정 가능", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "404", description = "게시글 없음", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<Long> updatePost(
+            @PathVariable Long postId,
+            @Valid @RequestBody CommunityPostUpdateRequestDto request
+    ) {
+        Long userId = extractUserId();
+        return CommonResponse.success(communityService.updatePost(userId, postId, request));
     }
 
     @GetMapping("/posts")
