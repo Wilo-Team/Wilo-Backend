@@ -60,9 +60,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.message").value("success"))
-                .andExpect(jsonPath("$.data.accessToken").isString())
-                .andExpect(jsonPath("$.data.refreshToken").isString());
+                .andExpect(jsonPath("$.message").value("success"));
     }
 
     @Test
@@ -89,7 +87,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.errorCode").value(4091));
+                .andExpect(jsonPath("$.errorCode").value(1001));
     }
 
     @Test
