@@ -16,6 +16,7 @@ import com.wilo.server.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -45,8 +46,14 @@ public class CommunityController {
     @Operation(summary = "게시글 작성", description = "카테고리/제목/내용/이미지 URL로 게시글을 생성합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "작성 성공"),
-            @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            )
     })
     public CommonResponse<Long> createPost(@Valid @RequestBody CommunityPostCreateRequestDto request) {
         Long userId = extractUserId();
@@ -57,10 +64,30 @@ public class CommunityController {
     @Operation(summary = "게시글 수정", description = "본인이 작성한 게시글의 카테고리/제목/내용/이미지를 수정합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "수정 성공"),
-            @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "403", description = "작성자만 수정 가능", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "404", description = "게시글 없음", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "작성자만 수정 가능",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":5005,\"message\":\"본인이 작성한 게시글만 수정할 수 있습니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "게시글 없음",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":5001,\"message\":\"게시글을 찾을 수 없습니다.\"}")
+                    )
+            )
     })
     public CommonResponse<Long> updatePost(
             @PathVariable Long postId,
@@ -74,9 +101,30 @@ public class CommunityController {
     @Operation(summary = "게시글 삭제", description = "본인이 작성한 게시글을 삭제합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "삭제 성공"),
-            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "403", description = "작성자만 삭제 가능", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "404", description = "게시글 없음", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "작성자만 삭제 가능",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":5006,\"message\":\"본인이 작성한 게시글만 삭제할 수 있습니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "게시글 없음",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":5001,\"message\":\"게시글을 찾을 수 없습니다.\"}")
+                    )
+            )
     })
     public CommonResponse<String> deletePost(@PathVariable Long postId) {
         Long userId = extractUserId();
@@ -109,7 +157,14 @@ public class CommunityController {
     @Operation(summary = "게시글 상세 조회", description = "게시글 상세 정보(작성자, 이미지, 댓글/답글)를 조회하고 조회수를 증가시킵니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "404", description = "게시글 없음", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "게시글 없음",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":5001,\"message\":\"게시글을 찾을 수 없습니다.\"}")
+                    )
+            )
     })
     public CommonResponse<CommunityPostDetailResponseDto> getPostDetail(@PathVariable Long postId) {
         return CommonResponse.success(communityService.getPostDetail(postId));
@@ -119,9 +174,36 @@ public class CommunityController {
     @Operation(summary = "댓글/답글 작성", description = "parentCommentId를 비우면 댓글, 넣으면 답글로 작성됩니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "작성 성공"),
-            @ApiResponse(responseCode = "400", description = "잘못된 부모 댓글", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "404", description = "게시글/댓글 없음", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "잘못된 부모 댓글",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = {
+                                    @ExampleObject(name = "INVALID_PARENT_COMMENT", value = "{\"errorCode\":5003,\"message\":\"해당 게시글에 속한 댓글만 답글 부모로 지정할 수 있습니다.\"}"),
+                                    @ExampleObject(name = "REPLY_DEPTH_NOT_ALLOWED", value = "{\"errorCode\":5004,\"message\":\"답글에는 다시 답글을 작성할 수 없습니다.\"}")
+                            }
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "게시글/댓글 없음",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = {
+                                    @ExampleObject(name = "POST_NOT_FOUND", value = "{\"errorCode\":5001,\"message\":\"게시글을 찾을 수 없습니다.\"}"),
+                                    @ExampleObject(name = "COMMENT_NOT_FOUND", value = "{\"errorCode\":5002,\"message\":\"댓글을 찾을 수 없습니다.\"}")
+                            }
+                    )
+            )
     })
     public CommonResponse<CommunityCommentDto> createComment(
             @PathVariable Long postId,
