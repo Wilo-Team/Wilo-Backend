@@ -4,8 +4,9 @@ import java.util.List;
 
 public record CommunityPostListResponseDto(
         List<CommunityPostSummaryDto> items,
-        int page,
+        String cursor,
         int size,
-        boolean hasNext
+        boolean hasNext,
+        String nextCursor
 ) {
 }

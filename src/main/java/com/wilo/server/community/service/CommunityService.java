@@ -23,20 +23,16 @@ import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.error.UserErrorCase;
 import com.wilo.server.user.repository.UserRepository;
-import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -87,19 +83,41 @@ public class CommunityService {
             CommunityCategory category,
             CommunityPostSortType sort,
             String keyword,
-            Integer page,
+            String cursor,
             Integer size
     ) {
-        int safePage = page == null || page < 0 ? 0 : page;
         int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
         CommunityPostSortType sortType = sort == null ? CommunityPostSortType.LATEST : sort;
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
 
-        Pageable pageable = PageRequest.of(safePage, safeSize, sortType.getSort());
-        Specification<CommunityPost> specification = createPostSpecification(category, keyword);
+        List<CommunityPost> fetchedPosts = switch (sortType) {
+            case LATEST -> {
+                LatestCursor latestCursor = LatestCursor.from(cursor);
+                yield communityPostRepository.findLatestPostsByCursor(
+                        category,
+                        keyword,
+                        latestCursor.createdAt(),
+                        latestCursor.id(),
+                        pageable
+                );
+            }
+            case RECOMMENDED -> {
+                RecommendedCursor recommendedCursor = RecommendedCursor.from(cursor);
+                yield communityPostRepository.findRecommendedPostsByCursor(
+                        category,
+                        keyword,
+                        recommendedCursor.likeCount(),
+                        recommendedCursor.createdAt(),
+                        recommendedCursor.id(),
+                        pageable
+                );
+            }
+        };
 
-        Page<CommunityPost> resultPage = communityPostRepository.findAll(specification, pageable);
+        boolean hasNext = fetchedPosts.size() > safeSize;
+        List<CommunityPost> pagePosts = hasNext ? fetchedPosts.subList(0, safeSize) : fetchedPosts;
 
-        List<CommunityPostSummaryDto> items = resultPage.getContent().stream()
+        List<CommunityPostSummaryDto> items = pagePosts.stream()
                 .map(post -> new CommunityPostSummaryDto(
                         post.getId(),
                         post.getCategory(),
@@ -114,7 +132,16 @@ public class CommunityService {
                 ))
                 .toList();
 
-        return new CommunityPostListResponseDto(items, safePage, safeSize, resultPage.hasNext());
+        String nextCursor = null;
+        if (hasNext && !pagePosts.isEmpty()) {
+            CommunityPost lastPost = pagePosts.get(pagePosts.size() - 1);
+            nextCursor = switch (sortType) {
+                case LATEST -> LatestCursor.of(lastPost).toCursorValue();
+                case RECOMMENDED -> RecommendedCursor.of(lastPost).toCursorValue();
+            };
+        }
+
+        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
     }
 
     @Transactional
@@ -214,26 +241,6 @@ public class CommunityService {
         return new CommunityLikeResponseDto(false, post.getLikeCount());
     }
 
-    private Specification<CommunityPost> createPostSpecification(CommunityCategory category, String keyword) {
-        return (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
-
-            if (category != null) {
-                predicates.add(cb.equal(root.get("category"), category));
-            }
-
-            if (keyword != null && !keyword.isBlank()) {
-                String likeKeyword = "%" + keyword.toLowerCase(Locale.ROOT) + "%";
-                predicates.add(cb.or(
-                        cb.like(cb.lower(root.get("title")), likeKeyword),
-                        cb.like(cb.lower(root.get("content")), likeKeyword)
-                ));
-            }
-
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
-    }
-
     private List<CommunityCommentDto> buildCommentTree(List<CommunityComment> comments) {
         Map<Long, CommunityCommentDto> commentMap = new HashMap<>();
         List<CommunityCommentDto> roots = new ArrayList<>();
@@ -292,5 +299,63 @@ public class CommunityService {
             return content;
         }
         return content.substring(0, CONTENT_PREVIEW_LENGTH) + "...";
+    }
+
+    private record LatestCursor(LocalDateTime createdAt, Long id) {
+        private static LatestCursor from(String cursor) {
+            if (cursor == null || cursor.isBlank()) {
+                return new LatestCursor(null, null);
+            }
+
+            String[] parts = cursor.split("\\|");
+            if (parts.length != 2) {
+                return new LatestCursor(null, null);
+            }
+
+            try {
+                return new LatestCursor(LocalDateTime.parse(parts[0]), Long.parseLong(parts[1]));
+            } catch (RuntimeException e) {
+                return new LatestCursor(null, null);
+            }
+        }
+
+        private static LatestCursor of(CommunityPost post) {
+            return new LatestCursor(post.getCreatedAt(), post.getId());
+        }
+
+        private String toCursorValue() {
+            return createdAt + "|" + id;
+        }
+    }
+
+    private record RecommendedCursor(Long likeCount, LocalDateTime createdAt, Long id) {
+        private static RecommendedCursor from(String cursor) {
+            if (cursor == null || cursor.isBlank()) {
+                return new RecommendedCursor(null, null, null);
+            }
+
+            String[] parts = cursor.split("\\|");
+            if (parts.length != 3) {
+                return new RecommendedCursor(null, null, null);
+            }
+
+            try {
+                return new RecommendedCursor(
+                        Long.parseLong(parts[0]),
+                        LocalDateTime.parse(parts[1]),
+                        Long.parseLong(parts[2])
+                );
+            } catch (RuntimeException e) {
+                return new RecommendedCursor(null, null, null);
+            }
+        }
+
+        private static RecommendedCursor of(CommunityPost post) {
+            return new RecommendedCursor(post.getLikeCount(), post.getCreatedAt(), post.getId());
+        }
+
+        private String toCursorValue() {
+            return likeCount + "|" + createdAt + "|" + id;
+        }
     }
 }

@@ -76,14 +76,49 @@ class CommunityControllerTest {
         );
 
         mockMvc.perform(get("/api/community/posts")
-                        .param("page", "0")
                         .param("size", "20"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("success"))
                 .andExpect(jsonPath("$.data.items[0].title").value("첫 글"))
                 .andExpect(jsonPath("$.data.items[0].createdAt").isNotEmpty())
                 .andExpect(jsonPath("$.data.items[0].daysAgo").isNumber())
+                .andExpect(jsonPath("$.data.cursor").doesNotExist())
+                .andExpect(jsonPath("$.data.nextCursor").doesNotExist())
                 .andExpect(jsonPath("$.data.items[0].categoryName").value("나무그늘"));
+    }
+
+    @Test
+    void getPosts_cursorPagination_returnsNextCursor() throws Exception {
+        User user = saveUser("cursor@example.com", "cursorUser");
+        for (int i = 0; i < 3; i++) {
+            communityPostRepository.save(
+                    CommunityPost.builder()
+                            .user(user)
+                            .category(CommunityCategory.SUPPORT_ROOT)
+                            .title("커서 테스트 " + i)
+                            .content("본문 " + i)
+                            .build()
+            );
+        }
+
+        MvcResult firstPageResult = mockMvc.perform(get("/api/community/posts")
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
+                .andReturn();
+
+        JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
+        String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
+
+        mockMvc.perform(get("/api/community/posts")
+                        .param("size", "2")
+                        .param("cursor", nextCursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.cursor").value(nextCursor))
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
     @Test

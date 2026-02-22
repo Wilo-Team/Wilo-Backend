@@ -51,7 +51,7 @@ public class CommunityController {
     }
 
     @GetMapping("/posts")
-    @Operation(summary = "게시글 목록 조회", description = "카테고리별(미지정 시 홈 전체), 최신순/추천순, 검색어 기반으로 게시글 목록을 조회합니다.")
+    @Operation(summary = "게시글 목록 조회", description = "카테고리별(미지정 시 홈 전체), 최신순/추천순, 검색어 기반으로 커서 페이지네이션 목록을 조회합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "조회 성공")
     })
@@ -59,10 +59,10 @@ public class CommunityController {
             @RequestParam(required = false) CommunityCategory category,
             @RequestParam(defaultValue = "LATEST") CommunityPostSortType sort,
             @RequestParam(required = false) String keyword,
-            @RequestParam(defaultValue = "0") Integer page,
+            @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") Integer size
     ) {
-        return CommonResponse.success(communityService.getPosts(category, sort, keyword, page, size));
+        return CommonResponse.success(communityService.getPosts(category, sort, keyword, cursor, size));
     }
 
     @GetMapping("/posts/{postId}")
