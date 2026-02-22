@@ -3,6 +3,7 @@ package com.wilo.server.community;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -136,7 +137,9 @@ class CommunityControllerTest {
         MvcResult parentResult = mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"content\":\"부모 댓글\"}"))
+                        .content("""
+                                {"content":"부모 댓글"}
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").value("부모 댓글"))
                 .andReturn();
@@ -147,7 +150,9 @@ class CommunityControllerTest {
         mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"parentCommentId\":" + parentCommentId + ",\"content\":\"답글\"}"))
+                        .content("""
+                                {"parentCommentId":%d,"content":"답글"}
+                                """.formatted(parentCommentId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").value("답글"));
 
@@ -184,6 +189,75 @@ class CommunityControllerTest {
     }
 
     @Test
+    void updatePost_byAuthor_success() throws Exception {
+        User author = saveUser("author@example.com", "authorUser");
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(author)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("수정 전 제목")
+                        .content("수정 전 내용")
+                        .build()
+        );
+
+        String updateRequest = """
+                {
+                  "category": "SUNNY_PLACE",
+                  "title": "수정 후 제목",
+                  "content": "수정 후 내용",
+                  "imageUrls": [
+                    "https://example.com/1.png",
+                    "https://example.com/2.png"
+                  ]
+                }
+                """;
+
+        mockMvc.perform(patch("/api/community/posts/{postId}", post.getId())
+                        .with(authentication(new JwtAuthentication(author.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateRequest))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(post.getId()));
+
+        mockMvc.perform(get("/api/community/posts/{postId}", post.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.title").value("수정 후 제목"))
+                .andExpect(jsonPath("$.data.content").value("수정 후 내용"))
+                .andExpect(jsonPath("$.data.category").value("SUNNY_PLACE"))
+                .andExpect(jsonPath("$.data.imageUrls.length()").value(2));
+    }
+
+    @Test
+    void updatePost_byNonAuthor_forbidden() throws Exception {
+        User author = saveUser("author2@example.com", "authorUser2");
+        User other = saveUser("other@example.com", "otherUser");
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(author)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("원본 제목")
+                        .content("원본 내용")
+                        .build()
+        );
+
+        String updateRequest = """
+                {
+                  "category": "SUNNY_PLACE",
+                  "title": "변경 시도",
+                  "content": "변경 시도 내용",
+                  "imageUrls": []
+                }
+                """;
+
+        mockMvc.perform(patch("/api/community/posts/{postId}", post.getId())
+                        .with(authentication(new JwtAuthentication(other.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(updateRequest))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(5005));
+    }
+
+    @Test
     void reply_on_reply_isRejected() throws Exception {
         User user = saveUser("depth@example.com", "depthUser");
         CommunityPost post = communityPostRepository.save(
@@ -206,7 +280,9 @@ class CommunityControllerTest {
         MvcResult childResult = mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"parentCommentId\":" + parentId + ",\"content\":\"1차 답글\"}"))
+                        .content("""
+                                {"parentCommentId":%d,"content":"1차 답글"}
+                                """.formatted(parentId)))
                 .andExpect(status().isOk())
                 .andReturn();
         long childId = objectMapper.readTree(childResult.getResponse().getContentAsString()).path("data").path("id").asLong();
@@ -214,7 +290,9 @@ class CommunityControllerTest {
         mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
                         .with(authentication(new JwtAuthentication(user.getId())))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"parentCommentId\":" + childId + ",\"content\":\"2차 답글 시도\"}"))
+                        .content("""
+                                {"parentCommentId":%d,"content":"2차 답글 시도"}
+                                """.formatted(childId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.errorCode").value(5004));
     }
