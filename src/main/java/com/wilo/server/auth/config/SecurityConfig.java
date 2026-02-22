@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -50,6 +51,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/v1/chatbot-types/**").permitAll()
                                 .requestMatchers("/api/v1/chat/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/community/posts/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sessionManagement ->
