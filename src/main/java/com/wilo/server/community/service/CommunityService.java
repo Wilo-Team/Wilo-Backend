@@ -89,24 +89,7 @@ public class CommunityService {
         }
 
         post.updatePost(request.category(), request.title(), request.content());
-
-        List<CommunityPostImage> existingImages = communityPostImageRepository.findByPostIdOrderBySortOrderAsc(postId);
-        if (!existingImages.isEmpty()) {
-            communityPostImageRepository.deleteAll(existingImages);
-        }
-
-        List<String> imageUrls = request.imageUrls();
-        if (imageUrls != null && !imageUrls.isEmpty()) {
-            List<CommunityPostImage> images = new ArrayList<>();
-            for (int i = 0; i < imageUrls.size(); i++) {
-                images.add(CommunityPostImage.builder()
-                        .post(post)
-                        .imageUrl(imageUrls.get(i))
-                        .sortOrder(i)
-                        .build());
-            }
-            communityPostImageRepository.saveAll(images);
-        }
+        post.replaceImages(request.imageUrls());
 
         return post.getId();
     }
@@ -118,21 +101,6 @@ public class CommunityService {
 
         if (!post.getUser().getId().equals(userId)) {
             throw ApplicationException.from(CommunityErrorCase.FORBIDDEN_POST_DELETE);
-        }
-
-        List<CommunityComment> comments = communityCommentRepository.findByPostIdOrderByCreatedAtAscIdAsc(postId);
-        if (!comments.isEmpty()) {
-            communityCommentRepository.deleteAll(comments);
-        }
-
-        List<CommunityPostImage> images = communityPostImageRepository.findByPostIdOrderBySortOrderAsc(postId);
-        if (!images.isEmpty()) {
-            communityPostImageRepository.deleteAll(images);
-        }
-
-        List<CommunityPostLike> likes = communityPostLikeRepository.findByPostId(postId);
-        if (!likes.isEmpty()) {
-            communityPostLikeRepository.deleteAll(likes);
         }
 
         communityPostRepository.delete(post);

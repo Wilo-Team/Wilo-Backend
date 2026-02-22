@@ -3,6 +3,8 @@ package com.wilo.server.community.entity;
 import com.wilo.server.global.entity.BaseEntity;
 import com.wilo.server.user.entity.User;
 import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -45,6 +47,15 @@ public class CommunityPost extends BaseEntity {
     @Column(nullable = false)
     private Long commentCount;
 
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CommunityPostImage> images = new ArrayList<>();
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CommunityComment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "post", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CommunityPostLike> likes = new ArrayList<>();
+
     @Builder
     private CommunityPost(User user, CommunityCategory category, String title, String content) {
         this.user = user;
@@ -83,6 +94,22 @@ public class CommunityPost extends BaseEntity {
     public void decreaseCommentCount() {
         if (this.commentCount > 0) {
             this.commentCount -= 1;
+        }
+    }
+
+    public void replaceImages(List<String> imageUrls) {
+        this.images.clear();
+
+        if (imageUrls == null || imageUrls.isEmpty()) {
+            return;
+        }
+
+        for (int i = 0; i < imageUrls.size(); i++) {
+            this.images.add(CommunityPostImage.builder()
+                    .post(this)
+                    .imageUrl(imageUrls.get(i))
+                    .sortOrder(i)
+                    .build());
         }
     }
 }

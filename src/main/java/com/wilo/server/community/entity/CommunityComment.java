@@ -3,6 +3,8 @@ package com.wilo.server.community.entity;
 import com.wilo.server.global.entity.BaseEntity;
 import com.wilo.server.user.entity.User;
 import jakarta.persistence.*;
+import java.util.ArrayList;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -33,6 +35,9 @@ public class CommunityComment extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_comment_id")
     private CommunityComment parentComment;
+
+    @OneToMany(mappedBy = "parentComment", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<CommunityComment> replies = new ArrayList<>();
 
     @Column(nullable = false, length = 1000)
     private String content;
