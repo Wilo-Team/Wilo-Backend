@@ -14,6 +14,7 @@ import com.wilo.server.community.service.CommunityService;
 import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -89,12 +90,18 @@ public class CommunityController {
             @ApiResponse(responseCode = "200", description = "조회 성공")
     })
     public CommonResponse<CommunityPostListResponseDto> getPosts(
+            @Parameter(
+                    description = "카테고리 값. 미지정 시 홈 전체 조회. 가능한 값: TREE_SHADE(나무그늘), SUNNY_PLACE(볕드는 곳), HELP_BRANCH(도움가지), SUPPORT_ROOT(버팀뿌리)"
+            )
             @RequestParam(required = false) CommunityCategory category,
-            @RequestParam(defaultValue = "LATEST") CommunityPostSortType sort,
+            @Parameter(
+                    description = "정렬 값. 기본값: RECOMMENDED. 가능한 값: RECOMMENDED(추천순), LATEST(최신순)"
+            )
+            @RequestParam(defaultValue = "RECOMMENDED") CommunityPostSortType sort,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") Integer size
-    ) {
+        ) {
         return CommonResponse.success(communityService.getPosts(category, sort, keyword, cursor, size));
     }
 

@@ -147,7 +147,7 @@ public class CommunityService {
             Integer size
     ) {
         int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
-        CommunityPostSortType sortType = sort == null ? CommunityPostSortType.LATEST : sort;
+        CommunityPostSortType sortType = sort == null ? CommunityPostSortType.RECOMMENDED : sort;
         Pageable pageable = PageRequest.of(0, safeSize + 1);
 
         List<CommunityPost> fetchedPosts = switch (sortType) {
