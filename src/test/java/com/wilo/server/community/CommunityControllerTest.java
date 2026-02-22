@@ -183,6 +183,42 @@ class CommunityControllerTest {
                 .andExpect(jsonPath("$.data.likeCount").value(0));
     }
 
+    @Test
+    void reply_on_reply_isRejected() throws Exception {
+        User user = saveUser("depth@example.com", "depthUser");
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(user)
+                        .category(CommunityCategory.HELP_BRANCH)
+                        .title("깊이 제한 테스트")
+                        .content("본문")
+                        .build()
+        );
+
+        MvcResult parentResult = mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"content\":\"부모 댓글\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        long parentId = objectMapper.readTree(parentResult.getResponse().getContentAsString()).path("data").path("id").asLong();
+
+        MvcResult childResult = mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"parentCommentId\":" + parentId + ",\"content\":\"1차 답글\"}"))
+                .andExpect(status().isOk())
+                .andReturn();
+        long childId = objectMapper.readTree(childResult.getResponse().getContentAsString()).path("data").path("id").asLong();
+
+        mockMvc.perform(post("/api/community/posts/{postId}/comments", post.getId())
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"parentCommentId\":" + childId + ",\"content\":\"2차 답글 시도\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value(5004));
+    }
+
     private User saveUser(String email, String nickname) {
         return userRepository.save(
                 User.builder()

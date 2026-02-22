@@ -186,6 +186,10 @@ public class CommunityService {
             if (!parentComment.getPost().getId().equals(postId)) {
                 throw ApplicationException.from(CommunityErrorCase.INVALID_PARENT_COMMENT);
             }
+
+            if (parentComment.getParentComment() != null) {
+                throw ApplicationException.from(CommunityErrorCase.REPLY_DEPTH_NOT_ALLOWED);
+            }
         }
 
         CommunityComment comment = communityCommentRepository.save(
