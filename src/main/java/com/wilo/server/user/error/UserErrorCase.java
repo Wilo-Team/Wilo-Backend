@@ -8,8 +8,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum UserErrorCase implements ErrorCase {
 
-    USER_NOT_FOUND(404, 3001, "유저를 찾을 수 없습니다."),
-    NICKNAME_ALREADY_EXISTS(409, 3002, "이미 사용 중인 닉네임입니다.");
+    USER_NOT_FOUND(404, 4001, "유저를 찾을 수 없습니다."),
+    NICKNAME_ALREADY_EXISTS(409, 4002, "이미 사용 중인 닉네임입니다.");
 
     private final Integer httpStatusCode;
     private final Integer errorCode;
