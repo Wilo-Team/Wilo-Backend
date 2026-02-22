@@ -258,6 +258,47 @@ class CommunityControllerTest {
     }
 
     @Test
+    void deletePost_byAuthor_success() throws Exception {
+        User author = saveUser("delete-author@example.com", "deleteAuthor");
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(author)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("삭제 대상")
+                        .content("삭제 내용")
+                        .build()
+        );
+
+        mockMvc.perform(delete("/api/community/posts/{postId}", post.getId())
+                        .with(authentication(new JwtAuthentication(author.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("success"));
+
+        mockMvc.perform(get("/api/community/posts/{postId}", post.getId()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value(5001));
+    }
+
+    @Test
+    void deletePost_byNonAuthor_forbidden() throws Exception {
+        User author = saveUser("delete-author2@example.com", "deleteAuthor2");
+        User other = saveUser("delete-other@example.com", "deleteOther");
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(author)
+                        .category(CommunityCategory.SUNNY_PLACE)
+                        .title("삭제 권한 테스트")
+                        .content("본문")
+                        .build()
+        );
+
+        mockMvc.perform(delete("/api/community/posts/{postId}", post.getId())
+                        .with(authentication(new JwtAuthentication(other.getId()))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(5006));
+    }
+
+    @Test
     void reply_on_reply_isRejected() throws Exception {
         User user = saveUser("depth@example.com", "depthUser");
         CommunityPost post = communityPostRepository.save(
