@@ -26,7 +26,7 @@ public class ChatSessionQueryService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
     public ChatSessionDetailResponse getSessionDetail(

@@ -14,6 +14,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 
@@ -55,9 +56,8 @@ public class ChatSessionService {
             ChatSessionListRequest request
     ) {
         Long userId = extractUserIdIfAuthenticated();
-        String guestId = normalizeGuestId(guestIdHeader);
+        String guestId = (userId != null) ? null : normalizeGuestId(guestIdHeader);
 
-        // 비로그인인데 guestId 없으면 불가
         if (userId == null && guestId == null) {
             throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
         }
@@ -82,9 +82,14 @@ public class ChatSessionService {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
 
-        Long cursor = request.cursor();
+        LocalDateTime cursorLastMessageAt = request.cursorLastMessageAt();
+        Long cursorId = request.cursorId();
 
-        if (cursor != null && cursor <= 0) {
+        if (cursorId != null && cursorId <= 0) {
+            throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
+        }
+
+        if ((cursorLastMessageAt == null) != (cursorId == null)) {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
 
@@ -94,7 +99,8 @@ public class ChatSessionService {
                 userId,
                 guestId,
                 status,
-                cursor,
+                cursorLastMessageAt,
+                cursorId,
                 pageable
         );
 
@@ -107,11 +113,19 @@ public class ChatSessionService {
                 .map(this::toItem)
                 .toList();
 
-        Long nextCursor = hasNext ? sessions.get(sessions.size() - 1).getId() : null;
+        LocalDateTime nextCursorLastMessageAt = null;
+        Long nextCursorId = null;
+
+        if (hasNext && !sessions.isEmpty()) {
+            ChatSession last = sessions.get(sessions.size() - 1);
+            nextCursorLastMessageAt = last.getLastMessageAt();
+            nextCursorId = last.getId();
+        }
 
         return ChatSessionListResponse.builder()
                 .sessions(items)
-                .nextCursor(nextCursor)
+                .nextCursorLastMessageAt(nextCursorLastMessageAt)
+                .nextCursorId(nextCursorId)
                 .hasNext(hasNext)
                 .build();
     }

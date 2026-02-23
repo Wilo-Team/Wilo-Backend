@@ -13,8 +13,13 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
 
 
 @RestController
@@ -51,34 +56,78 @@ public class ChatSessionController {
             summary = "대화 보관함(세션 목록) 조회",
             description = """
                     대화 세션 목록을 커서 기반으로 조회합니다.
-                    - 정렬: lastMessageAt DESC, id DESC
-                    - 기본 status=ACTIVE
-                    - 비로그인 사용자는 X-Guest-Id 헤더 필요
+                    
+                    정렬 기준:
+                    - lastMessageAt DESC
+                    - id DESC
+                    
+                    페이징 방식:
+                    - 복합 커서(lastMessageAt + id) 기반 Keyset Pagination
+                    
+                    기본값:
+                    - status = ACTIVE
+                    - size = 20
+                    
+                    제한:
+                    - size 최대 50
+                    
+                    인증 정책:
+                    - 로그인 사용자 → userId 기반 조회
+                    - 비로그인 사용자 → X-Guest-Id 헤더 필요
                     """
     )
     @ApiResponses(value = {
+
             @ApiResponse(responseCode = "200", description = "조회 성공"),
-            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(size 범위/잘못된 status 등)",
+
+            @ApiResponse(responseCode = "400", description = "요청 파라미터 오류(size 범위/status 오류 등)",
                     content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "401", description = "인증 실패(로그인 API)",
+
+            @ApiResponse(responseCode = "400", description = "비로그인 사용자의 X-Guest-Id 헤더 누락",
                     content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+
             @ApiResponse(responseCode = "500", description = "서버 오류",
                     content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<ChatSessionListResponse> getSessions(
+
             @Parameter(description = "비로그인 사용자 식별자(UUID). 비로그인 요청 시 필수", example = "550e8400-e29b-41d4-a716-446655440000")
-            @RequestHeader(value = "X-Guest-Id", required = false) String guestId,
+            @RequestHeader(value = "X-Guest-Id", required = false)
+            String guestId,
 
-            @Parameter(description = "기본 ACTIVE, 옵션: ACTIVE/ARCHIVED", example = "ACTIVE")
-            @RequestParam(required = false) String status,
 
-            @Parameter(description = "커서(이전 페이지의 nextCursor)", example = "200")
-            @RequestParam(required = false) Long cursor,
+            @Parameter(description = "기본 ACTIVE, 옵션: ACTIVE 또는 ARCHIVED", example = "ACTIVE")
+            @RequestParam(required = false)
+            @Pattern(regexp = "ACTIVE|ARCHIVED", message = "유효하지 않은 상태값입니다.")
+            String status,
 
-            @Parameter(description = "페이지 크기(기본 20, 최대 50)", example = "20")
-            @RequestParam(required = false) Integer size
+
+            @Parameter(description = "이전 페이지 마지막 세션의 lastMessageAt 값", example = "2026-02-19T10:40:00")
+            @RequestParam(required = false)
+            LocalDateTime cursorLastMessageAt,
+
+
+            @Parameter(description = "이전 페이지 마지막 세션의 sessionId 값", example = "101")
+            @RequestParam(required = false)
+            Long cursorId,
+
+
+            @Parameter(description = "페이지 크기 (기본 20, 최대 50)", example = "20")
+            @RequestParam(required = false)
+            @Min(value = 1, message = "size는 1 이상이어야 합니다.")
+            @Max(value = 50, message = "size는 50 이하여야 합니다.")
+            Integer size
+
     ) {
-        ChatSessionListRequest request = new ChatSessionListRequest(status, cursor, size);
+
+        ChatSessionListRequest request =
+                new ChatSessionListRequest(
+                        status,
+                        cursorLastMessageAt,
+                        cursorId,
+                        size
+                );
+
         return CommonResponse.success(chatSessionService.getSessions(guestId, request));
     }
 }

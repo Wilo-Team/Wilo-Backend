@@ -19,19 +19,22 @@ public class ChatMessage extends BaseEntity {
     @Column(name = "session_id", nullable = false)
     private Long sessionId;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "sender_type", nullable = false, length = 20)
-    private String senderType; // USER, BOT
+    private SenderType senderType;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "message_type", nullable = false, length = 20)
-    private String messageType; // TEXT, IMAGE, VOICE
+    private MessageType messageType;
 
     @Lob
     @Column(nullable = false)
     private String content;
 
     // 봇 메시지에만 적용 (SAFE/WARNING/CRITICAL)
+    @Enumerated(EnumType.STRING)
     @Column(name = "safety_status", length = 20)
-    private String safetyStatus;
+    private SafetyStatus safetyStatus;
 
     // 봇 메시지 choices 3개를 JSON 문자열로 저장
     @Lob

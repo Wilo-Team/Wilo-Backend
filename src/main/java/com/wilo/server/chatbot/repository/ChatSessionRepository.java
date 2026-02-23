@@ -7,12 +7,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
     @Query("""
         select cs
         from ChatSession cs
+            left join fetch cs.chatbotType
         where
             (
                 (:userId is not null and cs.userId = :userId)
@@ -20,14 +22,20 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
                 (:guestId is not null and cs.guestId = :guestId)
             )
           and cs.status = :status
-          and (:cursor is null or cs.id < :cursor)
+          and (
+                :cursorLastMessageAt is null
+                or cs.lastMessageAt < :cursorLastMessageAt
+                or (cs.lastMessageAt = :cursorLastMessageAt and cs.id < :cursorId)
+                or (cs.lastMessageAt is null and :cursorLastMessageAt is null and cs.id < :cursorId)
+          )
         order by cs.lastMessageAt desc nulls last, cs.id desc
     """)
     List<ChatSession> findSessions(
             @Param("userId") Long userId,
             @Param("guestId") String guestId,
             @Param("status") ChatSessionStatus status,
-            @Param("cursor") Long cursor,
+            @Param("cursorLastMessageAt") LocalDateTime cursorLastMessageAt,
+            @Param("cursorId") Long cursorId,
             Pageable pageable
     );
 }
