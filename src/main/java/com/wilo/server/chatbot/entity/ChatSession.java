@@ -72,4 +72,8 @@ public class ChatSession {
     public void archive() {
         this.status = ChatSessionStatus.ARCHIVED;
     }
+
+    public void restore() {
+        this.status = ChatSessionStatus.ACTIVE;
+    }
 }

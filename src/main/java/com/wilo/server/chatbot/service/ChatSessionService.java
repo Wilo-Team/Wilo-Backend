@@ -202,6 +202,47 @@ public class ChatSessionService {
                 .build();
     }
 
+    @Transactional
+    public ChatSessionRestoreResponse restoreSession(
+            Long sessionId,
+            String guestIdHeader
+    ) {
+        Long userId = extractUserIdIfAuthenticated();
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (userId == null && guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() ->
+                        new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND)
+                );
+
+        boolean isOwner = (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
+                || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
+
+        if (!isOwner) {
+            throw new ApplicationException(ChatbotErrorCase.SESSION_FORBIDDEN);
+        }
+
+        if (session.getStatus() == ChatSessionStatus.DELETED) {
+            throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
+        }
+
+        if (session.getStatus() != ChatSessionStatus.ARCHIVED) {
+            // ACTIVE인데 restore 요청하면 400 처리
+            throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
+        }
+
+        session.restore();
+
+        return ChatSessionRestoreResponse.builder()
+                .sessionId(session.getId())
+                .status(session.getStatus().name())
+                .build();
+    }
+
     private ChatSessionListItem toItem(ChatSession session) {
         String preview = session.getTitle();
 
