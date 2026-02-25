@@ -64,4 +64,8 @@ public class ChatSession {
     public void updateLastMessageAt(LocalDateTime time) {
         this.lastMessageAt = time;
     }
+
+    public void updateTitle(String title) {
+        this.title = title;
+    }
 }
