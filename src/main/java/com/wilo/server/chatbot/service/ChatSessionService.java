@@ -130,6 +130,44 @@ public class ChatSessionService {
                 .build();
     }
 
+    @Transactional
+    public ChatSessionTitleUpdateResponse updateSessionTitle(
+            Long sessionId,
+            String guestIdHeader,
+            ChatSessionTitleUpdateRequest request
+    ) {
+        Long userId = extractUserIdIfAuthenticated();
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (userId == null && guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
+
+        boolean isOwner =
+                (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
+                        || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
+
+        if (!isOwner) {
+            throw new ApplicationException(ChatbotErrorCase.SESSION_FORBIDDEN);
+        }
+
+        String title = request.getTitle().trim();
+
+        if (title.isBlank() || title.length() > 200) {
+            throw new ApplicationException(ChatbotErrorCase.TITLE_INVALID);
+        }
+
+        session.updateTitle(title);
+
+        return ChatSessionTitleUpdateResponse.builder()
+                .sessionId(session.getId())
+                .title(session.getTitle())
+                .build();
+    }
+
     private ChatSessionListItem toItem(ChatSession session) {
         String preview = session.getTitle();
 
