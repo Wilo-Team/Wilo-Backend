@@ -168,6 +168,40 @@ public class ChatSessionService {
                 .build();
     }
 
+    @Transactional
+    public ChatSessionArchiveResponse archiveSession(
+            Long sessionId,
+            String guestIdHeader
+    ) {
+        Long userId = extractUserIdIfAuthenticated();
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (userId == null && guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
+
+        boolean isOwner = (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
+                        || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
+
+        if (!isOwner) {
+            throw new ApplicationException(ChatbotErrorCase.SESSION_FORBIDDEN);
+        }
+
+        if (session.getStatus() == ChatSessionStatus.DELETED) {
+            throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
+        }
+
+        session.archive();
+
+        return ChatSessionArchiveResponse.builder()
+                .sessionId(session.getId())
+                .status(session.getStatus().name())
+                .build();
+    }
+
     private ChatSessionListItem toItem(ChatSession session) {
         String preview = session.getTitle();
 

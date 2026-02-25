@@ -68,4 +68,8 @@ public class ChatSession {
     public void updateTitle(String title) {
         this.title = title;
     }
+
+    public void archive() {
+        this.status = ChatSessionStatus.ARCHIVED;
+    }
 }
