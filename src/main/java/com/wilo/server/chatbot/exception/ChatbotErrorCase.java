@@ -13,7 +13,9 @@ public enum ChatbotErrorCase implements ErrorCase {
     INVALID_PARAMETER(400, 3003, "요청 파라미터가 올바르지 않습니다."),
     GUEST_ID_REQUIRED(400, 3004, "비로그인 사용자는 X-Guest-Id 헤더가 필요합니다."),
     SESSION_FORBIDDEN(403, 3005, "접근 권한이 없습니다."),
-    SESSION_NOT_FOUND(404, 3006, "대화 세션을 찾을 수 없습니다.");
+    SESSION_NOT_FOUND(404, 3006, "대화 세션을 찾을 수 없습니다."),
+    AI_SERVER_FAILED(502, 3101, "AI 서버 응답에 실패했습니다."),
+    AI_RESPONSE_INVALID(502, 3102, "AI 응답 형식이 올바르지 않습니다.");
 
 
     private final Integer httpStatusCode;
