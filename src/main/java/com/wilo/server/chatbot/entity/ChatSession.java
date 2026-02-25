@@ -60,4 +60,8 @@ public class ChatSession {
         session.lastMessageAt = null;
         return session;
     }
+
+    public void updateLastMessageAt(LocalDateTime time) {
+        this.lastMessageAt = time;
+    }
 }
