@@ -150,4 +150,31 @@ public class ChatSessionController {
     ) {
         return CommonResponse.success(chatSessionService.updateSessionTitle(sessionId, guestId, request));
     }
+
+    @PatchMapping("/{sessionId}/archive")
+    @Operation(
+            summary = "세션 보관",
+            description = """
+                대화 세션을 ARCHIVED 상태로 변경합니다.
+                - 로그인 사용자는 user_id 기준
+                - 비로그인 사용자는 X-Guest-Id 기준
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "보관 성공"),
+            @ApiResponse(responseCode = "403", description = "접근 권한 없음",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "404", description = "세션 없음",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<ChatSessionArchiveResponse> archiveSession(
+            @Parameter(description = "세션 ID", example = "101")
+            @PathVariable Long sessionId,
+            @Parameter(description = "비로그인 사용자 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
+            @RequestHeader(value = "X-Guest-Id", required = false) String guestId
+    ) {
+        return CommonResponse.success(chatSessionService.archiveSession(sessionId, guestId));
+    }
 }
