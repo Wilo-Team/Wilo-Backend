@@ -6,5 +6,5 @@ import lombok.Getter;
 @Getter
 @Builder
 public class GuestChatbotTypeSetResponseDto {
-    private String chatbotTypeId;
+    private Long chatbotTypeId;
 }

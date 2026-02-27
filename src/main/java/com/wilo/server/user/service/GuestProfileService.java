@@ -1,7 +1,10 @@
 package com.wilo.server.user.service;
 
 import com.wilo.server.chatbot.exception.ChatbotErrorCase;
+import com.wilo.server.chatbot.repository.ChatbotTypeRepository;
 import com.wilo.server.global.exception.ApplicationException;
+import com.wilo.server.user.dto.GuestChatbotTypeSetRequestDto;
+import com.wilo.server.user.dto.GuestChatbotTypeSetResponseDto;
 import com.wilo.server.user.dto.GuestNicknameRequestDto;
 import com.wilo.server.user.dto.GuestNicknameResponseDto;
 import com.wilo.server.user.entity.GuestProfile;
@@ -17,13 +20,13 @@ import org.springframework.transaction.annotation.Transactional;
 public class GuestProfileService {
 
     private final GuestProfileRepository guestProfileRepository;
+    private final ChatbotTypeRepository chatbotTypeRepository;
 
 
     public GuestNicknameResponseDto setNickname(
             String guestIdHeader,
             GuestNicknameRequestDto request
     ) {
-
         String guestId = normalizeGuestId(guestIdHeader);
 
         if (guestId == null) {
@@ -44,6 +47,35 @@ public class GuestProfileService {
                 .build();
     }
 
+    public GuestChatbotTypeSetResponseDto setChatbotType(
+            String guestIdHeader,
+            GuestChatbotTypeSetRequestDto request
+    ) {
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        var chatbotType = chatbotTypeRepository.findById(request.getChatbotTypeId())
+                .filter(type -> type.isActive())
+                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.CHATBOT_TYPE_NOT_FOUND));
+
+        GuestProfile profile = guestProfileRepository.findByGuestId(guestId)
+                .orElseGet(() -> guestProfileRepository.save(GuestProfile.create(guestId)));
+
+        profile.updateChatbotTypeId(chatbotType.getId());
+
+        return GuestChatbotTypeSetResponseDto.builder()
+                .chatbotTypeId(profile.getChatbotTypeId())
+                .build();
+    }
+
+    private String normalizeGuestId(String guestIdHeader) {
+        if (guestIdHeader == null) return null;
+        String trimmed = guestIdHeader.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
 
     private void validateNickname(String nickname) {
 
@@ -56,14 +88,4 @@ public class GuestProfileService {
         }
 
     }
-
-
-    private String normalizeGuestId(String guestIdHeader) {
-        if (guestIdHeader == null) return null;
-
-        String trimmed = guestIdHeader.trim();
-
-        return trimmed.isEmpty() ? null : trimmed;
-    }
-
 }
