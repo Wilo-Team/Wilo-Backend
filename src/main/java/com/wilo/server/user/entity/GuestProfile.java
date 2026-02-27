@@ -23,14 +23,22 @@ public class GuestProfile extends BaseEntity {
     private String nickname;
 
 
-    public static GuestProfile create(String guestId){
-        GuestProfile g = new GuestProfile();
-        g.guestId = guestId;
-        return g;
+    @Column(name = "chatbot_type_id")
+    private Long chatbotTypeId;
+
+    public static GuestProfile create(String guestId) {
+        GuestProfile p = new GuestProfile();
+        p.guestId = guestId;
+        p.nickname = null;
+        p.chatbotTypeId = null;
+        return p;
     }
 
-    public void updateNickname(String nickname){
+    public void updateChatbotTypeId(Long chatbotTypeId) {
+        this.chatbotTypeId = chatbotTypeId;
+    }
+
+    public void updateNickname(String nickname) {
         this.nickname = nickname;
     }
-
 }
