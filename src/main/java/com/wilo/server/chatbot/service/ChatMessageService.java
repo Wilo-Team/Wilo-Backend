@@ -16,12 +16,14 @@ import com.wilo.server.chatbot.repository.ChatMessageRepository;
 import com.wilo.server.chatbot.repository.ChatSessionRepository;
 import com.wilo.server.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -141,7 +143,8 @@ public class ChatMessageService {
                         m.getChoicesJson(),
                         new TypeReference<List<String>>() {}
                 );
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.warn("choices JSON 역직렬화 실패: messageId={}", m.getId(), e);
                 choices = null;
             }
         }

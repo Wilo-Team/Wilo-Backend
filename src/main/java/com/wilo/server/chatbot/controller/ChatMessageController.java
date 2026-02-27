@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,6 +48,7 @@ public class ChatMessageController {
     })
     public CommonResponse<ChatMessageSendResponse> sendMessage(
             @Parameter(description = "대화 세션 ID", example = "101")
+            @Min(value = 1, message = "sessionId는 1 이상이어야 합니다.")
             @PathVariable Long sessionId,
             @Parameter(description = "비로그인 사용자 식별자(UUID). 비로그인 요청 시 필수", example = "550e8400-e29b-41d4-a716-446655440000")
             @RequestHeader(value = "X-Guest-Id", required = false)

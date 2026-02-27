@@ -42,12 +42,19 @@ public class ChatMessage extends BaseEntity {
     @Column(name = "choices_json")
     private String choicesJson;
 
+    private static String requireContent(String content) {
+        if (content == null || content.isBlank()) {
+            throw new IllegalArgumentException("content는 비어 있을 수 없습니다.");
+        }
+        return content;
+    }
+
     public static ChatMessage createUser(Long sessionId, MessageType messageType, String content) {
         ChatMessage m = new ChatMessage();
         m.sessionId = sessionId;
         m.senderType = SenderType.USER;
         m.messageType = (messageType == null) ? MessageType.TEXT : messageType;
-        m.content = content;
+        m.content = requireContent(content);
         m.safetyStatus = null;
         m.choicesJson = null;
         return m;
@@ -58,7 +65,7 @@ public class ChatMessage extends BaseEntity {
         m.sessionId = sessionId;
         m.senderType = SenderType.BOT;
         m.messageType = MessageType.TEXT;
-        m.content = content;
+        m.content = requireContent(content);
         m.safetyStatus = safetyStatus;
         m.choicesJson = choicesJson;
         return m;

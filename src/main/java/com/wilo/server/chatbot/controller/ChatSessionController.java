@@ -143,6 +143,7 @@ public class ChatSessionController {
     public CommonResponse<ChatSessionTitleUpdateResponse> updateSessionTitle(
 
             @Parameter(description = "세션 ID", example = "101")
+            @Min(value = 1, message = "sessionId는 1 이상이어야 합니다.")
             @PathVariable Long sessionId,
             @Parameter(description = "비로그인 사용자 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
             @RequestHeader(value = "X-Guest-Id", required = false) String guestId,
@@ -171,6 +172,7 @@ public class ChatSessionController {
     })
     public CommonResponse<ChatSessionArchiveResponse> archiveSession(
             @Parameter(description = "세션 ID", example = "101")
+            @Min(value = 1, message = "sessionId는 1 이상이어야 합니다.")
             @PathVariable Long sessionId,
             @Parameter(description = "비로그인 사용자 UUID", example = "550e8400-e29b-41d4-a716-446655440000")
             @RequestHeader(value = "X-Guest-Id", required = false) String guestId
@@ -200,6 +202,7 @@ public class ChatSessionController {
     })
     public CommonResponse<ChatSessionRestoreResponse> restoreSession(
             @Parameter(description = "세션 ID", example = "101")
+            @Min(value = 1, message = "sessionId는 1 이상이어야 합니다.")
             @PathVariable Long sessionId,
             @Parameter(description = "비로그인 사용자 UUID. 비로그인 요청 시 필수", example = "550e8400-e29b-41d4-a716-446655440000")
             @RequestHeader(value = "X-Guest-Id", required = false) String guestId

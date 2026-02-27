@@ -146,6 +146,10 @@ public class ChatSessionService {
         ChatSession session = chatSessionRepository.findById(sessionId)
                 .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
 
+        if (session.getStatus() == ChatSessionStatus.DELETED) {
+            throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
+        }
+
         boolean isOwner =
                 (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
                         || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
