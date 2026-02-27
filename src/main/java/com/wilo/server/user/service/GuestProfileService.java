@@ -86,6 +86,5 @@ public class GuestProfileService {
         if (nickname.length() > 20) {
             throw new ApplicationException(UserErrorCase.INVALID_NICKNAME);
         }
-
     }
 }
