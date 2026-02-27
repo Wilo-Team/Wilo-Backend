@@ -31,12 +31,12 @@ public class ChatMessageTxService {
     @Transactional(readOnly = true)
     public Long getPersonaIdWithAuthCheck(Long sessionId, Long userId, String guestId) {
 
-        ChatSession session = chatSessionRepository.findById(sessionId)
+        ChatSession session = chatSessionRepository
+                .findByIdWithChatbotType(sessionId)
                 .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
 
-        boolean isOwner =
-                (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
-                        || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
+        boolean isOwner = (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
+                || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
 
         if (!isOwner) {
             throw new ApplicationException(ChatbotErrorCase.SESSION_FORBIDDEN);

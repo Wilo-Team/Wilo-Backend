@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
     @Query("""
@@ -37,5 +38,15 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
             @Param("cursorLastMessageAt") LocalDateTime cursorLastMessageAt,
             @Param("cursorId") Long cursorId,
             Pageable pageable
+    );
+
+    @Query("""
+        select cs
+        from ChatSession cs
+          join fetch cs.chatbotType
+        where cs.id = :sessionId
+    """)
+    Optional<ChatSession> findByIdWithChatbotType(
+            @Param("sessionId") Long sessionId
     );
 }
