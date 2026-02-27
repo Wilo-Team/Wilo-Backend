@@ -14,7 +14,10 @@ import java.time.Duration;
 @Configuration
 public class AiClientConfig {
     @Bean
-    public WebClient aiWebClient(@Value("${ai.base-url}") String baseUrl) {
+    public WebClient aiWebClient(
+            @Value("${ai.base-url:http://localhost:8000}")
+            String baseUrl
+    ) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)
                 .responseTimeout(Duration.ofSeconds(30));
