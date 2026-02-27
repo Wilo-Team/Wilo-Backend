@@ -60,4 +60,20 @@ public class ChatSession {
         session.lastMessageAt = null;
         return session;
     }
+
+    public void updateLastMessageAt(LocalDateTime time) {
+        this.lastMessageAt = time;
+    }
+
+    public void updateTitle(String title) {
+        this.title = title;
+    }
+
+    public void archive() {
+        this.status = ChatSessionStatus.ARCHIVED;
+    }
+
+    public void restore() {
+        this.status = ChatSessionStatus.ACTIVE;
+    }
 }
