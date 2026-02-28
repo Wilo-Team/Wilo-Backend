@@ -111,17 +111,24 @@ public class ChatMessageTxService {
     }
 
     @Transactional(readOnly = true)
-    public String getPersonaCodeWithAuthCheck(Long sessionId, Long userId, String guestId) {
+    public String getPersonaCodeWithAuthCheck(
+            Long sessionId,
+            Long userId,
+            String guestId
+    ) {
         ChatSession session = chatSessionRepository
                 .findByIdWithChatbotType(sessionId)
                 .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
 
         boolean isOwner = (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
-                || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
+                        || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
 
-        if (!isOwner) throw new ApplicationException(ChatbotErrorCase.SESSION_FORBIDDEN);
+        if (!isOwner) {
+            throw new ApplicationException(ChatbotErrorCase.SESSION_FORBIDDEN);
+        }
+        String code = session.getChatbotType().getCode();
 
-        return session.getChatbotType().getCode();
+        return ChatbotPersona.from(code).name();
     }
 
     @Transactional(readOnly = true)
