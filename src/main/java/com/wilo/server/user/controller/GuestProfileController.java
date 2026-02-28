@@ -47,6 +47,27 @@ public class GuestProfileController {
         return CommonResponse.success(guestProfileService.createProfile(guestId, request));
     }
 
+    @GetMapping
+    @Operation(
+            summary = "게스트 프로필 조회",
+            description = """
+                비로그인 사용자의 프로필 정보를 조회합니다.
+                - X-Guest-Id 헤더 필수
+                - 프로필 없으면 profileExists=false 반환
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(responseCode = "400", description = "게스트 헤더 누락",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<GuestProfileGetResponseDto> getProfile(
+            @Parameter(description = "비로그인 사용자 식별자(UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
+            @RequestHeader(value = "X-Guest-Id", required = false) String guestId
+    ) {
+        return CommonResponse.success(guestProfileService.getProfile(guestId));
+    }
+
     @PatchMapping("/nickname")
     @Operation(
             summary = "게스트 닉네임 수정",
