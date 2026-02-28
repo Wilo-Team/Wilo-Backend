@@ -80,6 +80,9 @@ public class GuestProfileController {
             @ApiResponse(responseCode = "200", description = "닉네임 설정 성공"),
             @ApiResponse(responseCode = "400", description = "닉네임 정책 위반",
                     content = @Content(schema = @Schema(implementation = CommonResponse.class))
+            ),
+            @ApiResponse(responseCode = "404", description = "게스트 프로필을 찾을 수 없음",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))
             )
     })
     public CommonResponse<GuestNicknameResponseDto> setNickname(
@@ -103,7 +106,7 @@ public class GuestProfileController {
             @ApiResponse(responseCode = "200", description = "설정 성공"),
             @ApiResponse(responseCode = "400", description = "게스트 헤더 누락/요청값 검증 실패",
                     content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "404", description = "존재하지 않는 챗봇 유형",
+            @ApiResponse(responseCode = "404", description = "게스트 프로필 미존재 또는 존재하지 않는 챗봇 유형",
                     content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<GuestChatbotTypeSetResponseDto> setGuestChatbotType(
