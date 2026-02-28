@@ -6,10 +6,7 @@ import com.wilo.server.chatbot.client.AiChatResult;
 import com.wilo.server.chatbot.client.dto.AiRoleMessage;
 import com.wilo.server.chatbot.dto.ChatMessageDto;
 import com.wilo.server.chatbot.dto.ChatMessageSendRequest;
-import com.wilo.server.chatbot.entity.ChatMessage;
-import com.wilo.server.chatbot.entity.ChatSession;
-import com.wilo.server.chatbot.entity.ChatSessionMemory;
-import com.wilo.server.chatbot.entity.MessageType;
+import com.wilo.server.chatbot.entity.*;
 import com.wilo.server.chatbot.exception.ChatbotErrorCase;
 import com.wilo.server.chatbot.repository.ChatMessageRepository;
 import com.wilo.server.chatbot.repository.ChatSessionMemoryRepository;
@@ -135,7 +132,7 @@ public class ChatMessageTxService {
 
         return recentDesc.stream()
                 .map(m -> AiRoleMessage.builder()
-                        .role(m.getSenderType().name().equals("USER") ? "user" : "assistant")
+                        .role(m.getSenderType() == SenderType.USER ? "user" : "assistant")
                         .content(m.getContent())
                         .build())
                 .toList();
