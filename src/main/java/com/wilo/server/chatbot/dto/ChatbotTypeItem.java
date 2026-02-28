@@ -12,7 +12,8 @@ public class ChatbotTypeItem {
     private String code;
     private String name;
     private String description;
-    private boolean isActive;
+    private String imageUrl;
+    private boolean active;
 
     public static ChatbotTypeItem from(ChatbotType type) {
         return ChatbotTypeItem.builder()
@@ -20,7 +21,8 @@ public class ChatbotTypeItem {
                 .code(type.getCode())
                 .name(type.getName())
                 .description(type.getDescription())
-                .isActive(type.isActive())
+                .imageUrl(type.getImageUrl())
+                .active(type.isActive())
                 .build();
     }
 }
