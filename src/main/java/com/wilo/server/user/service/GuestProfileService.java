@@ -49,6 +49,32 @@ public class GuestProfileService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public GuestProfileGetResponseDto getProfile(String guestIdHeader) {
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        return guestProfileRepository.findByGuestId(guestId)
+                .map(profile ->
+                        GuestProfileGetResponseDto.builder()
+                                .guestId(guestId)
+                                .nickname(profile.getNickname())
+                                .chatbotTypeId(profile.getChatbotTypeId())
+                                .profileExists(true)
+                                .build()
+                )
+                .orElse(GuestProfileGetResponseDto.builder()
+                                .guestId(guestId)
+                                .nickname(null)
+                                .chatbotTypeId(null)
+                                .profileExists(false)
+                                .build()
+                );
+    }
+
     public GuestNicknameResponseDto updateNickname(
             String guestIdHeader,
             GuestNicknameRequestDto request
