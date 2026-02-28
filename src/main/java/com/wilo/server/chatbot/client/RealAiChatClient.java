@@ -52,8 +52,15 @@ public class RealAiChatClient implements AiChatClient {
                 )
                 .onStatus(
                         s -> s.is4xxClientError(),
-                        r -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_RESPONSE_INVALID)
-                        )
+                        r -> r.bodyToMono(String.class)
+                                .flatMap(body -> {
+                                    System.out.println("AI ERROR BODY = " + body);
+                                    return Mono.error(
+                                            new ApplicationException(
+                                                    ChatbotErrorCase.AI_RESPONSE_INVALID
+                                            )
+                                    );
+                                })
                 )
                 .bodyToMono(AiChatResponse.class)
                 .timeout(Duration.ofSeconds(35))
