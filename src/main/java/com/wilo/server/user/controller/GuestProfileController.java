@@ -1,10 +1,7 @@
 package com.wilo.server.user.controller;
 
 import com.wilo.server.global.response.CommonResponse;
-import com.wilo.server.user.dto.GuestChatbotTypeSetRequestDto;
-import com.wilo.server.user.dto.GuestChatbotTypeSetResponseDto;
-import com.wilo.server.user.dto.GuestNicknameRequestDto;
-import com.wilo.server.user.dto.GuestNicknameResponseDto;
+import com.wilo.server.user.dto.*;
 import com.wilo.server.user.service.GuestProfileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -22,6 +19,33 @@ import org.springframework.web.bind.annotation.*;
 public class GuestProfileController {
 
     private final GuestProfileService guestProfileService;
+
+    @PostMapping
+    @Operation(
+            summary = "게스트 프로필 최초 생성",
+            description = """
+                게스트 프로필을 최초 생성합니다.
+                - X-Guest-Id 헤더 필수
+                - 닉네임과 챗봇 유형을 동시에 설정합니다.
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "프로필 생성 성공"),
+            @ApiResponse(responseCode = "400", description = "닉네임 정책 위반",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))
+            ),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 챗봇 유형",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))
+            )
+    })
+    public CommonResponse<GuestProfileCreateResponseDto> createProfile(
+            @Parameter(description = "비로그인 사용자 식별자(UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
+            @RequestHeader(value = "X-Guest-Id", required = false)
+            String guestId,
+            @Valid @RequestBody GuestProfileCreateRequestDto request
+    ) {
+        return CommonResponse.success(guestProfileService.createProfile(guestId, request));
+    }
 
     @PostMapping("/nickname")
     @Operation(
