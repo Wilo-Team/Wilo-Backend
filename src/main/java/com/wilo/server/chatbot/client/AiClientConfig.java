@@ -15,18 +15,16 @@ import java.time.Duration;
 public class AiClientConfig {
     @Bean
     public WebClient aiWebClient(
-            @Value("${ai.base-url:http://localhost:8000}")
-            String baseUrl
+            @Value("${ai.base-url:http://15.134.128.31:8000}") String baseUrl
     ) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)
                 .responseTimeout(Duration.ofSeconds(30));
+
         return WebClient.builder()
                 .baseUrl(baseUrl)
-                .clientConnector(new ReactorClientHttpConnector(HttpClient.create().responseTimeout(Duration.ofSeconds(5))))
-                .codecs(configurer -> configurer
-                        .defaultCodecs()
-                        .maxInMemorySize(1024 * 1024))
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(2 * 1024 * 1024))
                 .build();
     }
 }
