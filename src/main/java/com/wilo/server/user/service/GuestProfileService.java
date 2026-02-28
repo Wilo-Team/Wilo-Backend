@@ -3,10 +3,7 @@ package com.wilo.server.user.service;
 import com.wilo.server.chatbot.exception.ChatbotErrorCase;
 import com.wilo.server.chatbot.repository.ChatbotTypeRepository;
 import com.wilo.server.global.exception.ApplicationException;
-import com.wilo.server.user.dto.GuestChatbotTypeSetRequestDto;
-import com.wilo.server.user.dto.GuestChatbotTypeSetResponseDto;
-import com.wilo.server.user.dto.GuestNicknameRequestDto;
-import com.wilo.server.user.dto.GuestNicknameResponseDto;
+import com.wilo.server.user.dto.*;
 import com.wilo.server.user.entity.GuestProfile;
 import com.wilo.server.user.error.UserErrorCase;
 import com.wilo.server.user.repository.GuestProfileRepository;
@@ -67,6 +64,36 @@ public class GuestProfileService {
         profile.updateChatbotTypeId(chatbotType.getId());
 
         return GuestChatbotTypeSetResponseDto.builder()
+                .chatbotTypeId(profile.getChatbotTypeId())
+                .build();
+    }
+
+    public GuestProfileCreateResponseDto createProfile(
+            String guestIdHeader,
+            GuestProfileCreateRequestDto request
+    ) {
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        validateNickname(request.getNickname());
+
+        var chatbotType = chatbotTypeRepository.findById(request.getChatbotTypeId())
+                .filter(type -> type.isActive())
+                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.CHATBOT_TYPE_NOT_FOUND));
+
+        GuestProfile profile =
+                guestProfileRepository.findByGuestId(guestId)
+                        .orElseGet(() -> guestProfileRepository.save(GuestProfile.create(guestId)));
+
+        profile.updateNickname(request.getNickname());
+        profile.updateChatbotTypeId(chatbotType.getId());
+
+        return GuestProfileCreateResponseDto.builder()
+                .guestId(profile.getGuestId())
+                .nickname(profile.getNickname())
                 .chatbotTypeId(profile.getChatbotTypeId())
                 .build();
     }
