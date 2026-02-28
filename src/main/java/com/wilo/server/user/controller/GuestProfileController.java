@@ -47,13 +47,12 @@ public class GuestProfileController {
         return CommonResponse.success(guestProfileService.createProfile(guestId, request));
     }
 
-    @PostMapping("/nickname")
+    @PatchMapping("/nickname")
     @Operation(
-            summary = "게스트 닉네임 설정",
+            summary = "게스트 닉네임 수정",
             description = """
-                    비로그인 사용자의 닉네임을 설정합니다.
-                    - X-Guest-Id 헤더 필수
-                    - 최초 호출 시 프로필 생성
+                    비로그인 사용자의 닉네임을 수정합니다.
+                    - X-Guest-Id 헤더 필수    
                     """
     )
     @ApiResponses(value = {
@@ -68,16 +67,15 @@ public class GuestProfileController {
             String guestId,
             @Valid @RequestBody GuestNicknameRequestDto request
     ) {
-        return CommonResponse.success(guestProfileService.setNickname(guestId, request));
+        return CommonResponse.success(guestProfileService.updateNickname(guestId, request));
     }
 
-    @PostMapping("/chatbot-type")
+    @PatchMapping("/chatbot-type")
     @Operation(
-            summary = "비로그인(게스트) 챗봇 유형 설정",
+            summary = "비로그인(게스트) 챗봇 유형 수정",
             description = """
-                    비로그인 사용자의 챗봇 유형을 설정합니다.
-                    - 게스트 식별자는 X-Guest-Id 헤더로 전달합니다.
-                    - chatbotTypeId는 /api/v1/chatbot-types 조회 결과의 id를 사용합니다.
+                    비로그인 사용자의 챗봇 유형을 수정합니다.
+                    - X-Guest-Id 헤더 필수
                     """
     )
     @ApiResponses(value = {
@@ -92,6 +90,6 @@ public class GuestProfileController {
             @RequestHeader(value = "X-Guest-Id", required = false) String guestId,
             @Valid @RequestBody GuestChatbotTypeSetRequestDto request
     ) {
-        return CommonResponse.success(guestProfileService.setChatbotType(guestId, request));
+        return CommonResponse.success(guestProfileService.updateChatbotType(guestId, request));
     }
 }

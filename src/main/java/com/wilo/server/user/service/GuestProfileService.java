@@ -19,55 +19,6 @@ public class GuestProfileService {
     private final GuestProfileRepository guestProfileRepository;
     private final ChatbotTypeRepository chatbotTypeRepository;
 
-
-    public GuestNicknameResponseDto setNickname(
-            String guestIdHeader,
-            GuestNicknameRequestDto request
-    ) {
-        String guestId = normalizeGuestId(guestIdHeader);
-
-        if (guestId == null) {
-            throw new ApplicationException(
-                    ChatbotErrorCase.GUEST_ID_REQUIRED
-            );
-        }
-
-        validateNickname(request.getNickname());
-
-        GuestProfile profile = guestProfileRepository.findByGuestId(guestId).orElseGet(() -> guestProfileRepository.save(GuestProfile.create(guestId)));
-
-        profile.updateNickname(request.getNickname());
-
-        return GuestNicknameResponseDto.builder()
-                .guestId(guestId)
-                .nickname(profile.getNickname())
-                .build();
-    }
-
-    public GuestChatbotTypeSetResponseDto setChatbotType(
-            String guestIdHeader,
-            GuestChatbotTypeSetRequestDto request
-    ) {
-        String guestId = normalizeGuestId(guestIdHeader);
-
-        if (guestId == null) {
-            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
-        }
-
-        var chatbotType = chatbotTypeRepository.findById(request.getChatbotTypeId())
-                .filter(type -> type.isActive())
-                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.CHATBOT_TYPE_NOT_FOUND));
-
-        GuestProfile profile = guestProfileRepository.findByGuestId(guestId)
-                .orElseGet(() -> guestProfileRepository.save(GuestProfile.create(guestId)));
-
-        profile.updateChatbotTypeId(chatbotType.getId());
-
-        return GuestChatbotTypeSetResponseDto.builder()
-                .chatbotTypeId(profile.getChatbotTypeId())
-                .build();
-    }
-
     public GuestProfileCreateResponseDto createProfile(
             String guestIdHeader,
             GuestProfileCreateRequestDto request
@@ -94,6 +45,54 @@ public class GuestProfileService {
         return GuestProfileCreateResponseDto.builder()
                 .guestId(profile.getGuestId())
                 .nickname(profile.getNickname())
+                .chatbotTypeId(profile.getChatbotTypeId())
+                .build();
+    }
+
+    public GuestNicknameResponseDto updateNickname(
+            String guestIdHeader,
+            GuestNicknameRequestDto request
+    ) {
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        validateNickname(request.getNickname());
+
+        GuestProfile profile =
+                guestProfileRepository.findByGuestId(guestId)
+                        .orElseThrow(() -> new ApplicationException(UserErrorCase.GUEST_PROFILE_NOT_FOUND));
+
+        profile.updateNickname(request.getNickname());
+
+        return GuestNicknameResponseDto.builder()
+                .guestId(guestId)
+                .nickname(profile.getNickname())
+                .build();
+    }
+
+    public GuestChatbotTypeSetResponseDto updateChatbotType(
+            String guestIdHeader,
+            GuestChatbotTypeSetRequestDto request
+    ) {
+        String guestId = normalizeGuestId(guestIdHeader);
+
+        if (guestId == null) {
+            throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
+        }
+
+        var chatbotType = chatbotTypeRepository.findById(request.getChatbotTypeId())
+                .filter(type -> type.isActive())
+                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.CHATBOT_TYPE_NOT_FOUND));
+
+        GuestProfile profile = guestProfileRepository.findByGuestId(guestId)
+                        .orElseThrow(() -> new ApplicationException(UserErrorCase.GUEST_PROFILE_NOT_FOUND));
+
+        profile.updateChatbotTypeId(chatbotType.getId());
+
+        return GuestChatbotTypeSetResponseDto.builder()
                 .chatbotTypeId(profile.getChatbotTypeId())
                 .build();
     }
