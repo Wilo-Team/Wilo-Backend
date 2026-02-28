@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -126,7 +128,14 @@ public class GuestProfileService {
     private String normalizeGuestId(String guestIdHeader) {
         if (guestIdHeader == null) return null;
         String trimmed = guestIdHeader.trim();
-        return trimmed.isEmpty() ? null : trimmed;
+        if (trimmed.isEmpty()) return null;
+
+        try {
+            UUID.fromString(trimmed);  // UUID 형식 검증
+            return trimmed;
+        } catch (IllegalArgumentException e) {
+            throw new ApplicationException(UserErrorCase.INVALID_GUEST_ID);
+        }
     }
 
     private void validateNickname(String nickname) {

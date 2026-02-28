@@ -40,7 +40,7 @@ public class GuestProfileController {
     })
     public CommonResponse<GuestProfileCreateResponseDto> createProfile(
             @Parameter(description = "비로그인 사용자 식별자(UUID)", example = "550e8400-e29b-41d4-a716-446655440000")
-            @RequestHeader(value = "X-Guest-Id", required = false)
+            @RequestHeader(value = "X-Guest-Id")
             String guestId,
             @Valid @RequestBody GuestProfileCreateRequestDto request
     ) {
