@@ -9,6 +9,8 @@ import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
 import com.wilo.server.community.dto.CommunityPostListResponseDto;
 import com.wilo.server.community.dto.CommunityPostSummaryDto;
 import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.CommunityUserCommentListResponseDto;
+import com.wilo.server.community.dto.CommunityUserCommentSummaryDto;
 import com.wilo.server.community.entity.CommunityCategory;
 import com.wilo.server.community.entity.CommunityComment;
 import com.wilo.server.community.entity.CommunityPost;
@@ -189,6 +191,46 @@ public class CommunityService {
         }
 
         return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityUserCommentListResponseDto getCommentsByAuthor(
+            Long authorUserId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityComment> fetchedComments = communityCommentRepository.findLatestByUserIdCursor(
+                authorUserId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedComments.size() > safeSize;
+        List<CommunityComment> pageComments = hasNext ? fetchedComments.subList(0, safeSize) : fetchedComments;
+
+        List<CommunityUserCommentSummaryDto> items = pageComments.stream()
+                .map(comment -> new CommunityUserCommentSummaryDto(
+                        comment.getId(),
+                        comment.getPost().getId(),
+                        comment.getPost().getTitle(),
+                        comment.getContent(),
+                        comment.getCreatedAt(),
+                        calculateDaysAgo(comment.getCreatedAt())
+                ))
+                .toList();
+
+        String nextCursor = null;
+        if (hasNext && !pageComments.isEmpty()) {
+            CommunityComment lastComment = pageComments.get(pageComments.size() - 1);
+            nextCursor = lastComment.getCreatedAt() + "|" + lastComment.getId();
+        }
+
+        return new CommunityUserCommentListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
     }
 
     @Transactional

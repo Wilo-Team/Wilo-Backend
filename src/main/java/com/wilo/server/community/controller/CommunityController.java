@@ -8,6 +8,7 @@ import com.wilo.server.community.dto.CommunityPostCreateRequestDto;
 import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
 import com.wilo.server.community.dto.CommunityPostListResponseDto;
 import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.CommunityUserCommentListResponseDto;
 import com.wilo.server.community.entity.CommunityCategory;
 import com.wilo.server.community.entity.CommunityPostSortType;
 import com.wilo.server.community.service.CommunityService;
@@ -175,6 +176,30 @@ public class CommunityController {
             @RequestParam(defaultValue = "20") Integer size
     ) {
         return CommonResponse.success(communityService.getPostsByAuthor(userId, cursor, size));
+    }
+
+    @GetMapping("/users/{userId}/comments")
+    @Operation(
+            summary = "특정 유저 작성 댓글 조회",
+            description = "특정 유저가 작성한 댓글을 최신순(createdAt desc, id desc)으로 커서 페이지네이션 조회합니다. "
+                    + "첫 페이지는 cursor 없이 요청하고, 다음 페이지는 응답의 nextCursor를 cursor로 전달하세요."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "파라미터 오류(size/cursor)"
+            )
+    })
+    public CommonResponse<CommunityUserCommentListResponseDto> getCommentsByAuthor(
+            @Parameter(description = "조회할 작성자 유저 ID")
+            @PathVariable Long userId,
+            @Parameter(description = "커서 값. 포맷: createdAt|id (예: 2026-03-01T12:30:00|123)")
+            @RequestParam(required = false) String cursor,
+            @Parameter(description = "페이지 크기. 기본값 20, 최대 50")
+            @RequestParam(defaultValue = "20") Integer size
+    ) {
+        return CommonResponse.success(communityService.getCommentsByAuthor(userId, cursor, size));
     }
 
     @GetMapping("/posts/{postId}")
