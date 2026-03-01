@@ -12,6 +12,7 @@ public record NotificationSummaryDto(
         String commentPreview,
         String actorNickname,
         boolean isRead,
+        String timeAgo,
         LocalDateTime createdAt
 ) {
 }

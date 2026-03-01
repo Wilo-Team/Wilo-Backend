@@ -10,6 +10,7 @@ import com.wilo.server.notification.error.NotificationErrorCase;
 import com.wilo.server.notification.repository.UserNotificationRepository;
 import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.user.entity.User;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -137,6 +138,7 @@ public class NotificationService {
                 notification.getCommentPreview(),
                 actorNickname,
                 notification.isRead(),
+                calculateTimeAgo(notification.getCreatedAt()),
                 notification.getCreatedAt()
         );
     }
@@ -149,6 +151,25 @@ public class NotificationService {
             return content;
         }
         return content.substring(0, COMMENT_PREVIEW_LENGTH) + "...";
+    }
+
+    private String calculateTimeAgo(LocalDateTime createdAt) {
+        if (createdAt == null) {
+            return "0분 전";
+        }
+
+        long minutes = Math.max(0, Duration.between(createdAt, LocalDateTime.now()).toMinutes());
+        if (minutes < 60) {
+            return Math.max(1, minutes) + "분 전";
+        }
+
+        long hours = minutes / 60;
+        if (hours < 24) {
+            return hours + "시간 전";
+        }
+
+        long days = hours / 24;
+        return days + "일 전";
     }
 
     private record Cursor(LocalDateTime createdAt, Long id) {
