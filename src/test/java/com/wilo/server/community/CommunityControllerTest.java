@@ -19,6 +19,7 @@ import com.wilo.server.community.repository.CommunityPostRepository;
 import com.wilo.server.global.config.security.jwt.JwtAuthentication;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
+import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -109,6 +110,7 @@ class CommunityControllerTest {
                 .andExpect(jsonPath("$.data.hasNext").value(true))
                 .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
                 .andReturn();
+        printPrettyResponse(firstPageResult);
 
         JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
         String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
@@ -143,6 +145,7 @@ class CommunityControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.content").value("부모 댓글"))
                 .andReturn();
+        printPrettyResponse(parentResult);
 
         JsonNode parentJson = objectMapper.readTree(parentResult.getResponse().getContentAsString());
         long parentCommentId = parentJson.path("data").path("id").asLong();
@@ -316,6 +319,7 @@ class CommunityControllerTest {
                         .content("{\"content\":\"부모 댓글\"}"))
                 .andExpect(status().isOk())
                 .andReturn();
+        printPrettyResponse(parentResult);
         long parentId = objectMapper.readTree(parentResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
         MvcResult childResult = mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
@@ -326,6 +330,7 @@ class CommunityControllerTest {
                                 """.formatted(parentId)))
                 .andExpect(status().isOk())
                 .andReturn();
+        printPrettyResponse(childResult);
         long childId = objectMapper.readTree(childResult.getResponse().getContentAsString()).path("data").path("id").asLong();
 
         mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
@@ -348,5 +353,11 @@ class CommunityControllerTest {
                         .profileImageUrl("https://example.com/profile.png")
                         .build()
         );
+    }
+
+    private void printPrettyResponse(MvcResult result) throws Exception {
+        String json = result.getResponse().getContentAsString(StandardCharsets.UTF_8);
+        System.out.println("==== API 응답 결과 ====");
+        System.out.println(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(objectMapper.readTree(json)));
     }
 }
