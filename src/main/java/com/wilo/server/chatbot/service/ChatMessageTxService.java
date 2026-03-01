@@ -3,20 +3,22 @@ package com.wilo.server.chatbot.service;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.wilo.server.chatbot.client.AiChatResult;
+import com.wilo.server.chatbot.client.dto.AiRoleMessage;
 import com.wilo.server.chatbot.dto.ChatMessageDto;
 import com.wilo.server.chatbot.dto.ChatMessageSendRequest;
-import com.wilo.server.chatbot.entity.ChatMessage;
-import com.wilo.server.chatbot.entity.ChatSession;
-import com.wilo.server.chatbot.entity.MessageType;
+import com.wilo.server.chatbot.entity.*;
 import com.wilo.server.chatbot.exception.ChatbotErrorCase;
 import com.wilo.server.chatbot.repository.ChatMessageRepository;
+import com.wilo.server.chatbot.repository.ChatSessionMemoryRepository;
 import com.wilo.server.chatbot.repository.ChatSessionRepository;
 import com.wilo.server.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Slf4j
@@ -26,6 +28,7 @@ public class ChatMessageTxService {
 
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final ChatSessionMemoryRepository chatSessionMemoryRepository;
     private final ObjectMapper objectMapper;
 
     @Transactional(readOnly = true)
@@ -105,5 +108,48 @@ public class ChatMessageTxService {
                 .choices(choices)
                 .attachments(List.of())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public String getPersonaCodeWithAuthCheck(
+            Long sessionId,
+            Long userId,
+            String guestId
+    ) {
+        ChatSession session = chatSessionRepository
+                .findByIdWithChatbotType(sessionId)
+                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
+
+        boolean isOwner = (userId != null && session.getUserId() != null && session.getUserId().equals(userId))
+                        || (userId == null && guestId != null && guestId.equals(session.getGuestId()));
+
+        if (!isOwner) {
+            throw new ApplicationException(ChatbotErrorCase.SESSION_FORBIDDEN);
+        }
+        String code = session.getChatbotType().getCode();
+
+        return ChatbotPersona.from(code).name();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AiRoleMessage> findRecentAiMessages(Long sessionId, int n) {
+        if (n <= 0) {
+            return List.of();
+        }
+        List<ChatMessage> recentDesc = chatMessageRepository.findRecentDesc(sessionId, PageRequest.of(0, n));
+        // desc → asc로 바꿔 대화 순서 유지
+        return recentDesc.reversed().stream()
+                .map(m -> AiRoleMessage.builder()
+                        .role(m.getSenderType() == SenderType.USER ? "user" : "assistant")
+                        .content(m.getContent())
+                        .build())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public String getSessionSummary(Long sessionId) {
+        return chatSessionMemoryRepository.findById(sessionId)
+                .map(ChatSessionMemory::getSummary)
+                .orElse("");
     }
 }

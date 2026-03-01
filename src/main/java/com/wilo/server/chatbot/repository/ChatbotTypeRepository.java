@@ -8,4 +8,5 @@ import java.util.List;
 public interface ChatbotTypeRepository extends JpaRepository<ChatbotType, Long> {
 
     List<ChatbotType> findAllByIsActiveTrueOrderByIdAsc();
+    boolean existsByCode(String code);
 }

@@ -21,11 +21,7 @@ public class ChatMessageService {
     private final AiChatClient aiChatClient;
     private final ChatMessageTxService chatMessageTxService;
 
-    public ChatMessageSendResponse sendMessage(
-            Long sessionId,
-            String guestIdHeader,
-            ChatMessageSendRequest request
-    ) {
+    public ChatMessageSendResponse sendMessage(Long sessionId, String guestIdHeader, ChatMessageSendRequest request) {
 
         Long userId = extractUserIdIfAuthenticated();
         String guestId = normalizeGuestId(guestIdHeader);
@@ -34,21 +30,29 @@ public class ChatMessageService {
             throw new ApplicationException(ChatbotErrorCase.GUEST_ID_REQUIRED);
         }
 
-        // 세션 권한 체크 + personaId 얻기
-        Long personaId = chatMessageTxService.getPersonaIdWithAuthCheck(sessionId, userId, guestId);
+        // personaCode 얻기
+        String personaCode = chatMessageTxService.getPersonaCodeWithAuthCheck(sessionId, userId, guestId);
 
-        // USER 메시지 저장
+        // USER 저장
         ChatMessage savedUser = chatMessageTxService.saveUserMessage(sessionId, request);
 
-        // AI 호출
+        // context 구성 (최근 N턴 + summary)
+        String summary = chatMessageTxService.getSessionSummary(sessionId);
+        var recent = chatMessageTxService.findRecentAiMessages(sessionId, 20); // 정책값
+
         String requester = (userId != null) ? String.valueOf(userId) : guestId;
+        String requestId = java.util.UUID.randomUUID().toString();
 
         AiChatResult aiResult = aiChatClient.chat(
                 AiChatCommand.builder()
+                        .requestId(requestId)
                         .userId(requester)
                         .sessionId(sessionId)
-                        .personaId(personaId)
+                        .personaId(personaCode)
                         .message(request.getMessage())
+                        .sessionSummary(summary)
+                        .recentMessages(recent)
+                        .memory(null) // 1차는 null로
                         .build()
         );
 
@@ -56,7 +60,6 @@ public class ChatMessageService {
             throw new ApplicationException(ChatbotErrorCase.AI_RESPONSE_INVALID);
         }
 
-        // BOT 메시지 저장 + lastMessageAt 업데이트
         ChatMessage savedBot = chatMessageTxService.saveBotMessageWithSessionUpdate(sessionId, aiResult);
 
         return ChatMessageSendResponse.builder()

@@ -51,6 +51,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/v1/auth/**").permitAll()
                                 .requestMatchers("/api/v1/chatbot-types/**").permitAll()
                                 .requestMatchers("/api/v1/chat/**").permitAll()
+                                .requestMatchers("/api/v1/guest/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/community/posts/**").permitAll()
                                 .anyRequest().authenticated()
                 )
@@ -77,7 +78,7 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
 
         config.setAllowedOriginPatterns(List.of("*")); // ✅ 모든 도메인에서 접근 가능
-        config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // ✅ 허용할 HTTP 메서드
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")); // ✅ 허용할 HTTP 메서드
         config.setAllowedHeaders(List.of("*")); // ✅ 모든 헤더 허용
         config.setAllowCredentials(true); // ✅ 인증 정보 포함 요청 허용 (JWT 포함)
 
