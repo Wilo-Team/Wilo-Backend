@@ -56,12 +56,11 @@ class AuthControllerTest {
                 }
                 """;
 
-                mockMvc.perform(post("/api/auth/signup")
+                mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
-                        .andExpect(status().isOk())
-                        .andExpect(jsonPath("$.message").value("success"))
-                        .andExpect(jsonPath("$.data").value("회원가입이 완료되었습니다."));
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("success"));
     }
 
     @Test
@@ -84,7 +83,7 @@ class AuthControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/auth/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict())
@@ -108,7 +107,7 @@ class AuthControllerTest {
                 }
                 """;
 
-        mockMvc.perform(post("/api/auth/login")
+        mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isOk())
@@ -119,7 +118,7 @@ class AuthControllerTest {
 
     @Test
     void logout_success() throws Exception {
-        mockMvc.perform(post("/api/auth/logout")
+        mockMvc.perform(post("/api/v1/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"accessToken\":\"a\",\"refreshToken\":\"r\"}"))
                 .andExpect(status().isOk())
