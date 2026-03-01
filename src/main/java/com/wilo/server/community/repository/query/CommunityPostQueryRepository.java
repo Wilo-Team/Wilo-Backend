@@ -24,4 +24,11 @@ public interface CommunityPostQueryRepository {
             Long cursorId,
             Pageable pageable
     );
+
+    List<CommunityPost> findLatestPostsByAuthorCursor(
+            Long authorUserId,
+            LocalDateTime cursorCreatedAt,
+            Long cursorId,
+            Pageable pageable
+    );
 }

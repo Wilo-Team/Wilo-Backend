@@ -147,20 +147,7 @@ public class CommunityService {
         boolean hasNext = fetchedPosts.size() > safeSize;
         List<CommunityPost> pagePosts = hasNext ? fetchedPosts.subList(0, safeSize) : fetchedPosts;
 
-        List<CommunityPostSummaryDto> items = pagePosts.stream()
-                .map(post -> new CommunityPostSummaryDto(
-                        post.getId(),
-                        post.getCategory(),
-                        post.getCategory().getDisplayName(),
-                        post.getTitle(),
-                        createPreview(post.getContent()),
-                        post.getCreatedAt(),
-                        calculateDaysAgo(post.getCreatedAt()),
-                        post.getViewCount(),
-                        post.getLikeCount(),
-                        post.getCommentCount()
-                ))
-                .toList();
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
 
         String nextCursor = null;
         if (hasNext && !pagePosts.isEmpty()) {
@@ -169,6 +156,36 @@ public class CommunityService {
                 case LATEST -> LatestCursor.of(lastPost).toCursorValue();
                 case RECOMMENDED -> RecommendedCursor.of(lastPost).toCursorValue();
             };
+        }
+
+        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityPostListResponseDto getPostsByAuthor(
+            Long authorUserId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityPost> fetchedPosts = communityPostRepository.findLatestPostsByAuthorCursor(
+                authorUserId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedPosts.size() > safeSize;
+        List<CommunityPost> pagePosts = hasNext ? fetchedPosts.subList(0, safeSize) : fetchedPosts;
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
+
+        String nextCursor = null;
+        if (hasNext && !pagePosts.isEmpty()) {
+            CommunityPost lastPost = pagePosts.get(pagePosts.size() - 1);
+            nextCursor = LatestCursor.of(lastPost).toCursorValue();
         }
 
         return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
@@ -321,6 +338,23 @@ public class CommunityService {
     private CommunityPost getPostOrThrow(Long postId) {
         return communityPostRepository.findById(postId)
                 .orElseThrow(() -> ApplicationException.from(CommunityErrorCase.POST_NOT_FOUND));
+    }
+
+    private List<CommunityPostSummaryDto> toSummaryItems(List<CommunityPost> posts) {
+        return posts.stream()
+                .map(post -> new CommunityPostSummaryDto(
+                        post.getId(),
+                        post.getCategory(),
+                        post.getCategory().getDisplayName(),
+                        post.getTitle(),
+                        createPreview(post.getContent()),
+                        post.getCreatedAt(),
+                        calculateDaysAgo(post.getCreatedAt()),
+                        post.getViewCount(),
+                        post.getLikeCount(),
+                        post.getCommentCount()
+                ))
+                .toList();
     }
 
     private long calculateDaysAgo(LocalDateTime createdAt) {

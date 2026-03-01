@@ -153,6 +153,30 @@ public class CommunityController {
         return CommonResponse.success(communityService.getPosts(category, sort, keyword, cursor, size));
     }
 
+    @GetMapping("/users/{userId}/posts")
+    @Operation(
+            summary = "특정 유저 작성 게시글 조회",
+            description = "특정 유저가 작성한 게시글을 최신순(createdAt desc, id desc)으로 커서 페이지네이션 조회합니다. "
+                    + "첫 페이지는 cursor 없이 요청하고, 다음 페이지는 응답의 nextCursor를 cursor로 전달하세요."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "파라미터 오류(size/cursor)"
+            )
+    })
+    public CommonResponse<CommunityPostListResponseDto> getPostsByAuthor(
+            @Parameter(description = "조회할 작성자 유저 ID")
+            @PathVariable Long userId,
+            @Parameter(description = "커서 값. 포맷: createdAt|id (예: 2026-03-01T12:30:00|123)")
+            @RequestParam(required = false) String cursor,
+            @Parameter(description = "페이지 크기. 기본값 20, 최대 50")
+            @RequestParam(defaultValue = "20") Integer size
+    ) {
+        return CommonResponse.success(communityService.getPostsByAuthor(userId, cursor, size));
+    }
+
     @GetMapping("/posts/{postId}")
     @Operation(summary = "게시글 상세 조회", description = "게시글 상세 정보(작성자, 이미지, 댓글/답글)를 조회하고 조회수를 증가시킵니다.")
     @ApiResponses(value = {

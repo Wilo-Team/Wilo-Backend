@@ -343,6 +343,53 @@ class CommunityControllerTest {
                 .andExpect(jsonPath("$.errorCode").value(5004));
     }
 
+    @Test
+    void getPostsByAuthor_latestCursorPagination_success() throws Exception {
+        User author = saveUser("author-list@example.com", "authorList");
+        User other = saveUser("other-list@example.com", "otherList");
+
+        for (int i = 0; i < 3; i++) {
+            communityPostRepository.save(
+                    CommunityPost.builder()
+                            .user(author)
+                            .category(CommunityCategory.TREE_SHADE)
+                            .title("작성자 글 " + i)
+                            .content("작성자 본문 " + i)
+                            .build()
+            );
+        }
+
+        communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(other)
+                        .category(CommunityCategory.SUNNY_PLACE)
+                        .title("다른 사람 글")
+                        .content("다른 사람 본문")
+                        .build()
+        );
+
+        MvcResult firstPageResult = mockMvc.perform(get("/api/v1/community/users/{userId}/posts", author.getId())
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].title").value("작성자 글 2"))
+                .andReturn();
+        printPrettyResponse(firstPageResult);
+
+        JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
+        String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
+
+        mockMvc.perform(get("/api/v1/community/users/{userId}/posts", author.getId())
+                        .param("size", "2")
+                        .param("cursor", nextCursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].title").value("작성자 글 0"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
     private User saveUser(String email, String nickname) {
         return userRepository.save(
                 User.builder()
