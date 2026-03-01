@@ -109,6 +109,18 @@ public class NotificationService {
         return userNotificationRepository.markAllAsRead(receiverUserId, LocalDateTime.now());
     }
 
+    @Transactional
+    public void deleteNotification(Long receiverUserId, Long notificationId) {
+        UserNotification notification = userNotificationRepository.findById(notificationId)
+                .orElseThrow(() -> ApplicationException.from(NotificationErrorCase.NOTIFICATION_NOT_FOUND));
+
+        if (!notification.getReceiverUser().getId().equals(receiverUserId)) {
+            throw ApplicationException.from(NotificationErrorCase.FORBIDDEN_NOTIFICATION_ACCESS);
+        }
+
+        userNotificationRepository.delete(notification);
+    }
+
     private NotificationSummaryDto toDto(UserNotification notification) {
         String actorNickname = notification.getActorUser().getNickname();
         String message = switch (notification.getType()) {

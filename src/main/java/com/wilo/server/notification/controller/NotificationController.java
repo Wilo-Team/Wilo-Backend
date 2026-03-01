@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -104,6 +105,41 @@ public class NotificationController {
     public CommonResponse<Integer> markAllAsRead() {
         Long userId = extractUserId();
         return CommonResponse.success(notificationService.markAllAsRead(userId));
+    }
+
+    @DeleteMapping("/{notificationId}")
+    @Operation(summary = "알림 단건 삭제", description = "내 알림 1건을 삭제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "타인 알림 삭제 시도",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":7002,\"message\":\"본인의 알림만 처리할 수 있습니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "알림 없음",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":7001,\"message\":\"알림을 찾을 수 없습니다.\"}")
+                    )
+            )
+    })
+    public CommonResponse<String> deleteNotification(@PathVariable Long notificationId) {
+        Long userId = extractUserId();
+        notificationService.deleteNotification(userId, notificationId);
+        return CommonResponse.success("알림이 삭제되었습니다.");
     }
 
     private Long extractUserId() {

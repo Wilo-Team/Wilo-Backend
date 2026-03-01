@@ -1,6 +1,7 @@
 package com.wilo.server.notification;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -243,6 +244,85 @@ class NotificationControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.items.length()").value(0))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    void deleteNotification_success() throws Exception {
+        User author = saveUser("delete-author@example.com", "deleteAuthor");
+        User commenter = saveUser("delete-commenter@example.com", "deleteCommenter");
+
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(author)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("삭제 테스트")
+                        .content("본문")
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
+                        .with(authentication(new JwtAuthentication(commenter.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"content":"삭제 대상 알림"}
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult listResult = mockMvc.perform(get("/api/v1/notifications")
+                        .with(authentication(new JwtAuthentication(author.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andReturn();
+
+        long notificationId = objectMapper.readTree(listResult.getResponse().getContentAsString())
+                .path("data").path("items").get(0).path("id").asLong();
+
+        mockMvc.perform(delete("/api/v1/notifications/{notificationId}", notificationId)
+                        .with(authentication(new JwtAuthentication(author.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("success"));
+
+        mockMvc.perform(get("/api/v1/notifications")
+                        .with(authentication(new JwtAuthentication(author.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(0));
+    }
+
+    @Test
+    void deleteNotification_forOtherUsersNotification_forbidden() throws Exception {
+        User author = saveUser("delete-author2@example.com", "deleteAuthor2");
+        User commenter = saveUser("delete-commenter2@example.com", "deleteCommenter2");
+        User other = saveUser("delete-other@example.com", "deleteOther");
+
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(author)
+                        .category(CommunityCategory.SUNNY_PLACE)
+                        .title("삭제 권한 테스트")
+                        .content("본문")
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
+                        .with(authentication(new JwtAuthentication(commenter.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"content":"삭제 권한 확인"}
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult listResult = mockMvc.perform(get("/api/v1/notifications")
+                        .with(authentication(new JwtAuthentication(author.getId()))))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        long notificationId = objectMapper.readTree(listResult.getResponse().getContentAsString())
+                .path("data").path("items").get(0).path("id").asLong();
+
+        mockMvc.perform(delete("/api/v1/notifications/{notificationId}", notificationId)
+                        .with(authentication(new JwtAuthentication(other.getId()))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(7002));
     }
 
     private User saveUser(String email, String nickname) {
