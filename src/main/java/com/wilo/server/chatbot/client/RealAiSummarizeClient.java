@@ -34,19 +34,36 @@ public class RealAiSummarizeClient implements AiSummarizeClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(req)
                 .retrieve()
+
+                // 5xx → retry 대상
                 .onStatus(HttpStatusCode::is5xxServerError,
                         r -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED)))
+
+                // 4xx → retry 대상 아님
                 .onStatus(HttpStatusCode::is4xxClientError,
                         r -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_RESPONSE_INVALID)))
+
                 .bodyToMono(AiSummarizeResponse.class)
+
+                // AI 명세 timeout = 60초
                 .timeout(Duration.ofSeconds(60))
+
+                // retry 1회
                 .retryWhen(
-                        Retry.max(1).filter(ex -> ex instanceof java.util.concurrent.TimeoutException
-                                        || ex instanceof ApplicationException).transientErrors(true)
+                        Retry.max(1)
+                                .filter(ex ->
+                                        ex instanceof java.util.concurrent.TimeoutException
+                                                || ex instanceof org.springframework.web.reactive.function.client.WebClientRequestException
+                                                || (ex instanceof ApplicationException
+                                                && ((ApplicationException) ex).getErrorCase() == ChatbotErrorCase.AI_SERVER_FAILED)
+                                )
                 )
+
                 .onErrorMap(java.util.concurrent.TimeoutException.class,
-                        ex -> new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED))
+                        ex -> new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED)
+                )
                 .block();
+
 
         if (res == null) {
             throw new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED);
