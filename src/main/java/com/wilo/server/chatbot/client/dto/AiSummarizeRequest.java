@@ -11,4 +11,13 @@ import java.util.List;
 @Builder
 public class AiSummarizeRequest {
     private List<AiRoleMessage> messages;
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class Message {
+        private String role;
+        private String content;
+    }
 }
