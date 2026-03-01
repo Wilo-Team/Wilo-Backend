@@ -133,6 +133,9 @@ public class ChatMessageTxService {
 
     @Transactional(readOnly = true)
     public List<AiRoleMessage> findRecentAiMessages(Long sessionId, int n) {
+        if (n <= 0) {
+            return List.of();
+        }
         List<ChatMessage> recentDesc = chatMessageRepository.findRecentDesc(sessionId, PageRequest.of(0, n));
         // desc → asc로 바꿔 대화 순서 유지
         return recentDesc.reversed().stream()

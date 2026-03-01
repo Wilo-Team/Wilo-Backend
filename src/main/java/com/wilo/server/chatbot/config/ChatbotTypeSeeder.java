@@ -5,6 +5,7 @@ import com.wilo.server.chatbot.repository.ChatbotTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,14 +35,16 @@ public class ChatbotTypeSeeder implements ApplicationRunner {
             return;
         }
 
-        chatbotTypeRepository.save(
-                ChatbotType.create(
-                        code,
-                        name,
-                        desc,
-                        imageUrl,
-                        true
-                )
-        );
+        try {
+            chatbotTypeRepository.save(
+                    ChatbotType.create(
+                            code,
+                            name,
+                            desc,
+                            imageUrl,
+                            true)
+            );
+        } catch (DataIntegrityViolationException ignored) {
+        }
     }
 }
