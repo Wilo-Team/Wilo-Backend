@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
@@ -73,4 +74,12 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
             @Param("sessionId") Long sessionId,
             @Param("keepFromId") Long keepFromId
     );
+
+    // 세션 ID 목록으로 메시지 삭제
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        delete from ChatMessage m
+        where m.sessionId in :sessionIds
+    """)
+    int deleteBySessionIds(@Param("sessionIds") Collection<Long> sessionIds);
 }
