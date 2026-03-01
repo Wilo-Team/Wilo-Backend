@@ -21,6 +21,7 @@ import com.wilo.server.community.repository.CommunityPostImageRepository;
 import com.wilo.server.community.repository.CommunityPostLikeRepository;
 import com.wilo.server.community.repository.CommunityPostRepository;
 import com.wilo.server.global.exception.ApplicationException;
+import com.wilo.server.notification.service.NotificationService;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.error.UserErrorCase;
 import com.wilo.server.user.repository.UserRepository;
@@ -49,6 +50,7 @@ public class CommunityService {
     private final CommunityCommentRepository communityCommentRepository;
     private final CommunityPostLikeRepository communityPostLikeRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public Long createPost(Long userId, CommunityPostCreateRequestDto request) {
@@ -230,6 +232,7 @@ public class CommunityService {
         );
 
         post.increaseCommentCount();
+        notificationService.notifyComment(post, user, comment);
 
         return CommunityCommentDto.of(
                 comment.getId(),
@@ -254,6 +257,7 @@ public class CommunityService {
                             .build()
             );
             post.increaseLikeCount();
+            notificationService.notifyPostLike(post, user);
         }
 
         return new CommunityLikeResponseDto(true, post.getLikeCount());
