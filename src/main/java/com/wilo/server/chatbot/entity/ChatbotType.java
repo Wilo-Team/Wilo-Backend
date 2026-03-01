@@ -24,6 +24,9 @@ public class ChatbotType {
     @Column(length = 255)
     private String description;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
 }
