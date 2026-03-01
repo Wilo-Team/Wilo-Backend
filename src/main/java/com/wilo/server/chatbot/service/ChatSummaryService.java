@@ -65,6 +65,10 @@ public class ChatSummaryService {
             throw new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED, e);
         }
 
+        if (result == null) {
+            throw new ApplicationException(ChatbotErrorCase.AI_RESPONSE_INVALID);
+        }
+
         String summary = (result.getSummary() == null) ? "" : result.getSummary().trim();
         List<String> keyTopics = (result.getKeyTopics() == null) ? List.of() : result.getKeyTopics();
 

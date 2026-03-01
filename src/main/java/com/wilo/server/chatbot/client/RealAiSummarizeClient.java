@@ -62,6 +62,9 @@ public class RealAiSummarizeClient implements AiSummarizeClient {
                 .onErrorMap(java.util.concurrent.TimeoutException.class,
                         ex -> new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED)
                 )
+                .onErrorMap(org.springframework.web.reactive.function.client.WebClientRequestException.class,
+                        ex -> new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED)
+                )
                 .block();
 
 
