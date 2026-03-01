@@ -122,6 +122,11 @@ public class NotificationService {
         userNotificationRepository.delete(notification);
     }
 
+    @Transactional
+    public int deleteAllUserNotifications(Long receiverUserId) {
+        return userNotificationRepository.deleteAllByReceiverUserId(receiverUserId);
+    }
+
     private NotificationSummaryDto toDto(UserNotification notification) {
         String actorNickname = notification.getActorUser().getNickname();
         String message = switch (notification.getType()) {

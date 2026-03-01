@@ -142,6 +142,24 @@ public class NotificationController {
         return CommonResponse.success("알림이 삭제되었습니다.");
     }
 
+    @DeleteMapping
+    @Operation(summary = "알림 전체 삭제", description = "내 알림 전체를 삭제하고 삭제 건수를 반환합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "전체 삭제 성공"),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            )
+    })
+    public CommonResponse<Integer> deleteAllUserNotifications() {
+        Long userId = extractUserId();
+        return CommonResponse.success(notificationService.deleteAllUserNotifications(userId));
+    }
+
     private Long extractUserId() {
         Object principal = SecurityContextHolder.getContext().getAuthentication() != null
                 ? SecurityContextHolder.getContext().getAuthentication().getPrincipal()

@@ -19,4 +19,11 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
                and n.isRead = false
             """)
     int markAllAsRead(@Param("receiverUserId") Long receiverUserId, @Param("readAt") LocalDateTime readAt);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            delete from UserNotification n
+             where n.receiverUser.id = :receiverUserId
+            """)
+    int deleteAllByReceiverUserId(@Param("receiverUserId") Long receiverUserId);
 }

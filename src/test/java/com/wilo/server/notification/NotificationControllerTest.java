@@ -325,6 +325,45 @@ class NotificationControllerTest {
                 .andExpect(jsonPath("$.errorCode").value(7002));
     }
 
+    @Test
+    void deleteAllUserNotifications_success() throws Exception {
+        User author = saveUser("delete-all-author@example.com", "deleteAllAuthor");
+        User commenter = saveUser("delete-all-commenter@example.com", "deleteAllCommenter");
+        User liker = saveUser("delete-all-liker@example.com", "deleteAllLiker");
+
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(author)
+                        .category(CommunityCategory.HELP_BRANCH)
+                        .title("전체 삭제 테스트")
+                        .content("본문")
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post.getId())
+                        .with(authentication(new JwtAuthentication(commenter.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"content":"전체 삭제 댓글"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post.getId())
+                        .with(authentication(new JwtAuthentication(liker.getId()))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(delete("/api/v1/notifications")
+                        .with(authentication(new JwtAuthentication(author.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(2));
+
+        mockMvc.perform(get("/api/v1/notifications")
+                        .with(authentication(new JwtAuthentication(author.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(0))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
     private User saveUser(String email, String nickname) {
         return userRepository.save(
                 User.builder()
