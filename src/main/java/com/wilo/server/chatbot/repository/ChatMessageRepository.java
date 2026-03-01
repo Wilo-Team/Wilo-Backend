@@ -49,7 +49,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     List<ChatMessage> findAllForSummary(
             @Param("sessionId") Long sessionId
     );
-    
+
     // 유지할 메시지 기준 ID 조회
     @Query("""
         select m.id
