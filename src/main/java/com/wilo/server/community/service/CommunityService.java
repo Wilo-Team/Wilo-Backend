@@ -233,6 +233,40 @@ public class CommunityService {
         return new CommunityUserCommentListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
     }
 
+    @Transactional(readOnly = true)
+    public CommunityPostListResponseDto getLikedPostsByUser(
+            Long userId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityPostLike> fetchedLikes = communityPostLikeRepository.findLikedPostsByUserIdCursor(
+                userId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedLikes.size() > safeSize;
+        List<CommunityPostLike> pageLikes = hasNext ? fetchedLikes.subList(0, safeSize) : fetchedLikes;
+        List<CommunityPost> pagePosts = pageLikes.stream()
+                .map(CommunityPostLike::getPost)
+                .toList();
+
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
+
+        String nextCursor = null;
+        if (hasNext && !pageLikes.isEmpty()) {
+            CommunityPostLike lastLike = pageLikes.get(pageLikes.size() - 1);
+            nextCursor = lastLike.getCreatedAt() + "|" + lastLike.getId();
+        }
+
+        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
     @Transactional
     public CommunityPostDetailResponseDto getPostDetail(Long postId) {
         CommunityPost post = getPostOrThrow(postId);

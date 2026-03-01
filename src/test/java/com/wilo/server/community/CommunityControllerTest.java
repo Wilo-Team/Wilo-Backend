@@ -461,6 +461,63 @@ class CommunityControllerTest {
                 .andExpect(jsonPath("$.data.hasNext").value(false));
     }
 
+    @Test
+    void getLikedPostsByUser_latestCursorPagination_success() throws Exception {
+        User postAuthor = saveUser("liked-post-author@example.com", "likedPostAuthor");
+        User liker = saveUser("liked-user@example.com", "likedUser");
+        User other = saveUser("liked-other@example.com", "likedOther");
+
+        CommunityPost post1 = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(postAuthor)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("좋아요 글 1")
+                        .content("본문1")
+                        .build()
+        );
+        CommunityPost post2 = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(postAuthor)
+                        .category(CommunityCategory.SUNNY_PLACE)
+                        .title("좋아요 글 2")
+                        .content("본문2")
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post1.getId())
+                        .with(authentication(new JwtAuthentication(liker.getId()))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post2.getId())
+                        .with(authentication(new JwtAuthentication(liker.getId()))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post2.getId())
+                        .with(authentication(new JwtAuthentication(other.getId()))))
+                .andExpect(status().isOk());
+
+        MvcResult firstPageResult = mockMvc.perform(get("/api/v1/community/users/{userId}/liked-posts", liker.getId())
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].title").value("좋아요 글 2"))
+                .andReturn();
+        printPrettyResponse(firstPageResult);
+
+        JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
+        String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
+
+        mockMvc.perform(get("/api/v1/community/users/{userId}/liked-posts", liker.getId())
+                        .param("size", "1")
+                        .param("cursor", nextCursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].title").value("좋아요 글 1"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
     private User saveUser(String email, String nickname) {
         return userRepository.save(
                 User.builder()
