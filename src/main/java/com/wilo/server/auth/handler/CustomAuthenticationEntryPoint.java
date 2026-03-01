@@ -15,7 +15,7 @@ public class CustomAuthenticationEntryPoint implements AuthenticationEntryPoint 
 
         String requestURI = request.getRequestURI();
         if(requestURI.startsWith("/actuator/") ||
-            requestURI.startsWith("/api/auth") ||
+            requestURI.startsWith("/api/v1/auth") ||
                 requestURI.equals("/") ||
                 requestURI.equals("/robots.txt") ||
                 requestURI.equals("/home") ||
