@@ -6,101 +6,133 @@ import com.wilo.server.chatbot.client.AiSummarizeResult;
 import com.wilo.server.chatbot.client.dto.AiRoleMessage;
 import com.wilo.server.chatbot.entity.ChatMessage;
 import com.wilo.server.chatbot.entity.ChatSessionMemory;
-import com.wilo.server.chatbot.entity.SenderType;
+import com.wilo.server.chatbot.exception.ChatbotErrorCase;
 import com.wilo.server.chatbot.repository.ChatMessageRepository;
 import com.wilo.server.chatbot.repository.ChatSessionMemoryRepository;
+import com.wilo.server.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatSummaryService {
-
-    private static final int KEEP_RECENT_N = 30;     // 최근 N턴 유지
-    private static final int SUMMARIZE_BATCH = 1000; // 요약할 최대 raw 수
+    private static final int KEEP_LAST_MESSAGES = 30;        // DB에 남길 최근 raw 개수
+    private static final int SUMMARIZE_TRIGGER_COUNT = 40;   // raw가 이 이상이면 요약 돌림
 
     private final ChatMessageRepository chatMessageRepository;
     private final ChatSessionMemoryRepository chatSessionMemoryRepository;
     private final AiSummarizeClient aiSummarizeClient;
     private final ObjectMapper objectMapper;
 
-    // 세션 만료 시 호출
+    // 메시지 수가 충분히 쌓였으면 요약 생성 + 오래된 raw 삭제
     @Transactional
-    public void summarizeAndPrune(Long sessionId) {
-
-        // 최신 KEEP_RECENT_N개를 남기기 위해, 최신 N개 중 가장 작은 id를 keepFromId로 사용
-        List<ChatMessage> recentDesc = chatMessageRepository.findRecentDesc(
-                sessionId,
-                PageRequest.of(0, KEEP_RECENT_N)
+    public void summarizeIfNeeded(Long sessionId) {
+        List<Long> probe = chatMessageRepository.findRecentIds(
+                sessionId, PageRequest.of(0, SUMMARIZE_TRIGGER_COUNT)
         );
 
-        if (recentDesc.isEmpty()) {
+        if (probe.size() < SUMMARIZE_TRIGGER_COUNT) {
             return;
         }
 
-        Long keepFromId = recentDesc.stream()
-                .map(ChatMessage::getId)
-                .min(Long::compareTo)
-                .orElse(null);
+        summarizeAndTrim(sessionId);
+    }
 
-        // keepFromId 이전의 오래된 메시지들을 요약 대상으로 수집 (DB에 오래된 메시지가 많이 쌓이지 않도록 상한 설정)
-        List<ChatMessage> oldestAsc = chatMessageRepository.findOldestAsc(sessionId, PageRequest.of(0, SUMMARIZE_BATCH));
+    // 강제 요약 (세션 만료 시 호출)
+    @Transactional
+    public void summarizeAndTrim(Long sessionId) {
 
-        // 전체가 KEEP_RECENT_N 이하라면 prune/요약 스킵
-        if (oldestAsc.size() <= KEEP_RECENT_N) {
-            return;
+        List<ChatMessage> all = chatMessageRepository.findAllForSummary(sessionId);
+        if (all.isEmpty()) return;
+
+        // AI로 보낼 messages 구성
+        List<AiRoleMessage> toSummarize = buildSummarizeInput(sessionId, all);
+        if (toSummarize.isEmpty()) return;
+
+        // AI summarize 호출
+        AiSummarizeResult result;
+        try {
+            result = aiSummarizeClient.summarize(toSummarize);
+        } catch (Exception e) {
+            log.error("summarize failed sessionId={}", sessionId, e);
+            throw new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED, e);
         }
 
-        // 요약 대상 = keepFromId 미만
-        List<ChatMessage> toSummarize = oldestAsc.stream()
-                .filter(m -> m.getId() < keepFromId)
-                .toList();
+        String summary = (result.getSummary() == null) ? "" : result.getSummary().trim();
+        List<String> keyTopics = (result.getKeyTopics() == null) ? List.of() : result.getKeyTopics();
 
-        if (toSummarize.isEmpty()) {
-            return;
-        }
-
-        // role+content만 전달
-        List<AiRoleMessage> aiMsgs = toSummarize.stream()
-                .map(m -> AiRoleMessage.builder()
-                        .role(m.getSenderType() == SenderType.USER ? "user" : "assistant")
-                        .content(m.getContent()) // TODO: PII sanitizer 적용
-                        .build())
-                .toList();
-
-        AiSummarizeResult result = aiSummarizeClient.summarize(aiMsgs);
-
-        // 빈 입력이면 summary="" 내려올 수 있음. 빈 요약이면 저장 스킵
-        if (result.getSummary() == null || result.getSummary().isBlank()) {
-            log.info("summarize empty sessionId={}", sessionId);
+        // summary 비어있으면 저장 스킵
+        if (summary.isBlank()) {
             return;
         }
 
         String keyTopicsJson;
         try {
-            keyTopicsJson = objectMapper.writeValueAsString(result.getKeyTopics());
+            keyTopicsJson = objectMapper.writeValueAsString(keyTopics);
         } catch (Exception e) {
-            log.warn("keyTopics 직렬화 실패 sessionId={}", sessionId, e);
-            keyTopicsJson = "[]";
+            throw new ApplicationException(ChatbotErrorCase.CHATBOT_INTERNAL_SERVER_ERROR, e);
         }
 
-        ChatSessionMemory mem = chatSessionMemoryRepository.findById(sessionId).orElse(null);
-        if (mem == null) {
-            chatSessionMemoryRepository.save(
-                    ChatSessionMemory.upsert(sessionId, result.getSummary(), keyTopicsJson)
-            );
-        } else {
-            mem.update(result.getSummary(), keyTopicsJson);
+        ChatSessionMemory memory = chatSessionMemoryRepository.findById(sessionId)
+                .orElseGet(() -> ChatSessionMemory.upsert(sessionId, "", "[]"));
+
+        memory.update(summary, keyTopicsJson);
+        chatSessionMemoryRepository.save(memory);
+
+        // 오래된 raw 삭제 (최근 KEEP_LAST_MESSAGES만 유지)
+        trimOldMessages(sessionId);
+    }
+
+    private List<AiRoleMessage> buildSummarizeInput(Long sessionId, List<ChatMessage> allAsc) {
+
+        String previousSummary = chatSessionMemoryRepository.findById(sessionId)
+                .map(ChatSessionMemory::getSummary)
+                .orElse("");
+
+        List<AiRoleMessage> out = new ArrayList<>();
+
+        if (previousSummary != null && !previousSummary.isBlank()) {
+            out.add(AiRoleMessage.builder()
+                    .role("system")
+                    .content("이전 세션 요약: " + previousSummary)
+                    .build());
         }
 
-        // 오래된 raw 삭제
-        int deleted = chatMessageRepository.deleteOlderThan(sessionId, keepFromId);
-        log.info("prune sessionId={} keepFromId={} deleted={}", sessionId, keepFromId, deleted);
+        for (ChatMessage m : allAsc) {
+            if (m.getContent() == null || m.getContent().isBlank()) continue;
+
+            String role = (m.getSenderType().name().equals("USER")) ? "user" : "assistant";
+
+            out.add(AiRoleMessage.builder()
+                    .role(role)
+                    .content(m.getContent())
+                    .build());
+        }
+
+        return out;
+    }
+
+    private void trimOldMessages(Long sessionId) {
+
+        // 최근 KEEP_LAST_MESSAGES개의 가장 오래된 id를 구해서, 그보다 작은 것들을 전부 삭제
+        List<Long> recentIds = chatMessageRepository.findRecentIds(
+                sessionId, PageRequest.of(0, KEEP_LAST_MESSAGES)
+        );
+
+        if (recentIds.size() < KEEP_LAST_MESSAGES) {
+            return;
+        }
+
+        Long keepFromId = recentIds.get(recentIds.size() - 1);
+
+        // keepFromId 보다 작은 것들 삭제
+        chatMessageRepository.deleteOlderThan(sessionId, keepFromId);
     }
 }
