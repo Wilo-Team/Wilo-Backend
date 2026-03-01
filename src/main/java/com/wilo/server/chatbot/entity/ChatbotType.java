@@ -29,4 +29,20 @@ public class ChatbotType {
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
+
+    public static ChatbotType create(
+            String code,
+            String name,
+            String description,
+            String imageUrl,
+            boolean isActive
+    ) {
+        ChatbotType t = new ChatbotType();
+        t.code = code;
+        t.name = name;
+        t.description = description;
+        t.imageUrl = imageUrl;
+        t.isActive = isActive;
+        return t;
+    }
 }
