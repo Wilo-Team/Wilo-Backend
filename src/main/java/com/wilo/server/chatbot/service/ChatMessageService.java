@@ -20,6 +20,7 @@ public class ChatMessageService {
 
     private final AiChatClient aiChatClient;
     private final ChatMessageTxService chatMessageTxService;
+    private final ChatSummaryService chatSummaryService;
 
     public ChatMessageSendResponse sendMessage(Long sessionId, String guestIdHeader, ChatMessageSendRequest request) {
 
@@ -61,6 +62,8 @@ public class ChatMessageService {
         }
 
         ChatMessage savedBot = chatMessageTxService.saveBotMessageWithSessionUpdate(sessionId, aiResult);
+
+        chatSummaryService.summarizeIfNeeded(sessionId); // AI 대화 내용 요약 자동 실행
 
         return ChatMessageSendResponse.builder()
                 .sessionId(sessionId)
