@@ -30,7 +30,7 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         where m.sessionId = :sessionId
         order by m.id desc
     """)
-    List<ChatMessage> findRecentDesc(Long sessionId, Pageable pageable);
+    List<ChatMessage> findRecentDesc(@Param("sessionId") Long sessionId, Pageable pageable);
 
     @Query("""
         select m
@@ -38,13 +38,13 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         where m.sessionId = :sessionId
         order by m.id asc
     """)
-    List<ChatMessage> findOldestAsc(Long sessionId, Pageable pageable);
+    List<ChatMessage> findOldestAsc(@Param("sessionId") Long sessionId, Pageable pageable);
 
-    @Modifying
+    @Modifying(clearAutomatically = true)
     @Query("""
         delete from ChatMessage m
         where m.sessionId = :sessionId
           and m.id < :keepFromId
     """)
-    int deleteOlderThan(Long sessionId, Long keepFromId);
+    int deleteOlderThan(@Param("sessionId") Long sessionId, @Param("keepFromId") Long keepFromId);
 }

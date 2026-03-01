@@ -8,7 +8,7 @@ public enum ChatbotPersona {
     public static ChatbotPersona from(String code) {
         try {
             return ChatbotPersona.valueOf(code);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException | NullPointerException e) {
             throw new IllegalArgumentException("Invalid persona: " + code);
         }
     }

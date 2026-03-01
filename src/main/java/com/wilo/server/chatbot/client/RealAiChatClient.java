@@ -2,10 +2,10 @@ package com.wilo.server.chatbot.client;
 
 import com.wilo.server.chatbot.client.dto.AiChatRequest;
 import com.wilo.server.chatbot.client.dto.AiChatResponse;
-import com.wilo.server.chatbot.entity.SafetyStatus;
 import com.wilo.server.chatbot.exception.ChatbotErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class RealAiChatClient implements AiChatClient {
@@ -26,17 +27,17 @@ public class RealAiChatClient implements AiChatClient {
 
         AiChatRequest.Context context =
                 AiChatRequest.Context.builder()
-                        .recent_messages(command.getRecentMessages() == null ? List.of() : command.getRecentMessages())
-                        .session_summary(command.getSessionSummary() == null ? "" : command.getSessionSummary())
+                        .recentMessages(command.getRecentMessages() == null ? List.of() : command.getRecentMessages())
+                        .sessionSummary(command.getSessionSummary() == null ? "" : command.getSessionSummary())
                         .memory(command.getMemory() == null ? Map.of() : command.getMemory())
                         .build();
 
 
         AiChatRequest req = AiChatRequest.builder()
-                .request_id(command.getRequestId())
-                .user_id(command.getUserId())
-                .session_id(String.valueOf(command.getSessionId()))
-                .persona_id(command.getPersonaId())
+                .requestId(command.getRequestId())
+                .userId(command.getUserId())
+                .sessionId(String.valueOf(command.getSessionId()))
+                .personaId(command.getPersonaId())
                 .message(command.getMessage())
                 .context(context)
                 .build();
@@ -54,12 +55,8 @@ public class RealAiChatClient implements AiChatClient {
                         s -> s.is4xxClientError(),
                         r -> r.bodyToMono(String.class)
                                 .flatMap(body -> {
-                                    System.out.println("AI ERROR BODY = " + body);
-                                    return Mono.error(
-                                            new ApplicationException(
-                                                    ChatbotErrorCase.AI_RESPONSE_INVALID
-                                            )
-                                    );
+                                    log.warn("AI chat 4xx from upstream. requestId={}, status={}", command.getRequestId(), r.statusCode());
+                                    return Mono.error(new ApplicationException(ChatbotErrorCase.AI_RESPONSE_INVALID));
                                 })
                 )
                 .bodyToMono(AiChatResponse.class)
@@ -84,7 +81,7 @@ public class RealAiChatClient implements AiChatClient {
                 .sessionId(command.getSessionId())
                 .answer(res.getAnswer())
                 .choices(res.getChoices() == null ? List.of() : res.getChoices())
-                .safetyStatus(AiSafetyMapper.toBackend(res.getSafety_status()))
+                .safetyStatus(AiSafetyMapper.toBackend(res.getSafetyStatus()))
                 .build();
     }
 }

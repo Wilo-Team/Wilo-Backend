@@ -6,6 +6,7 @@ import com.wilo.server.chatbot.client.dto.AiSummarizeResponse;
 import com.wilo.server.chatbot.exception.ChatbotErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -33,16 +34,18 @@ public class RealAiSummarizeClient implements AiSummarizeClient {
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(req)
                 .retrieve()
-                .onStatus(
-                        s -> s.value() == 502 || s.value() == 503 || s.value() == 504,
-                        r -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED))
-                )
+                .onStatus(HttpStatusCode::is5xxServerError,
+                        r -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED)))
+                .onStatus(HttpStatusCode::is4xxClientError,
+                        r -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_RESPONSE_INVALID)))
                 .bodyToMono(AiSummarizeResponse.class)
                 .timeout(Duration.ofSeconds(60))
                 .retryWhen(
                         Retry.max(1).filter(ex -> ex instanceof java.util.concurrent.TimeoutException
                                         || ex instanceof ApplicationException).transientErrors(true)
                 )
+                .onErrorMap(java.util.concurrent.TimeoutException.class,
+                        ex -> new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED))
                 .block();
 
         if (res == null) {

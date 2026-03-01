@@ -135,9 +135,7 @@ public class ChatMessageTxService {
     public List<AiRoleMessage> findRecentAiMessages(Long sessionId, int n) {
         List<ChatMessage> recentDesc = chatMessageRepository.findRecentDesc(sessionId, PageRequest.of(0, n));
         // desc → asc로 바꿔 대화 순서 유지
-        Collections.reverse(recentDesc);
-
-        return recentDesc.stream()
+        return recentDesc.reversed().stream()
                 .map(m -> AiRoleMessage.builder()
                         .role(m.getSenderType() == SenderType.USER ? "user" : "assistant")
                         .content(m.getContent())

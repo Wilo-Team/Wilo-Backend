@@ -6,6 +6,7 @@ import com.wilo.server.chatbot.client.AiSummarizeResult;
 import com.wilo.server.chatbot.client.dto.AiRoleMessage;
 import com.wilo.server.chatbot.entity.ChatMessage;
 import com.wilo.server.chatbot.entity.ChatSessionMemory;
+import com.wilo.server.chatbot.entity.SenderType;
 import com.wilo.server.chatbot.repository.ChatMessageRepository;
 import com.wilo.server.chatbot.repository.ChatSessionMemoryRepository;
 import lombok.RequiredArgsConstructor;
@@ -68,7 +69,7 @@ public class ChatSummaryService {
         // role+content만 전달
         List<AiRoleMessage> aiMsgs = toSummarize.stream()
                 .map(m -> AiRoleMessage.builder()
-                        .role(m.getSenderType().name().equals("USER") ? "user" : "assistant")
+                        .role(m.getSenderType() == SenderType.USER ? "user" : "assistant")
                         .content(m.getContent()) // TODO: PII sanitizer 적용
                         .build())
                 .toList();
@@ -85,6 +86,7 @@ public class ChatSummaryService {
         try {
             keyTopicsJson = objectMapper.writeValueAsString(result.getKeyTopics());
         } catch (Exception e) {
+            log.warn("keyTopics 직렬화 실패 sessionId={}", sessionId, e);
             keyTopicsJson = "[]";
         }
 
