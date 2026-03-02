@@ -1,6 +1,7 @@
 package com.wilo.server.chatbot.controller;
 
 import com.wilo.server.chatbot.dto.*;
+import com.wilo.server.chatbot.service.ChatSessionDeleteService;
 import com.wilo.server.chatbot.service.ChatSessionService;
 import com.wilo.server.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,7 @@ import java.time.LocalDateTime;
 public class ChatSessionController {
 
     private final ChatSessionService chatSessionService;
+    private final ChatSessionDeleteService chatSessionDeleteService;
 
     @PostMapping
     @Operation(
@@ -208,5 +210,32 @@ public class ChatSessionController {
             @RequestHeader(value = "X-Guest-Id", required = false) String guestId
     ) {
         return CommonResponse.success(chatSessionService.restoreSession(sessionId, guestId));
+    }
+
+
+    @DeleteMapping
+    @Operation(
+            summary = "세션 삭제(선택 삭제)",
+            description = """
+                사용자가 선택한 대화 세션과 해당 세션의 메시지 데이터를 영구 삭제합니다.
+                - 로그인 사용자는 JWT userId 기준
+                - 비로그인 사용자는 X-Guest-Id 기준
+                """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(responseCode = "400", description = "삭제할 세션이 올바르지 않습니다.",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "403", description = "접근 권한 없음",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "500", description = "서버 오류",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<ChatSessionDeleteResponse> deleteSessions(
+            @Parameter(description = "비로그인 사용자 UUID. 비로그인 요청 시 필수", example = "550e8400-e29b-41d4-a716-446655440000")
+            @RequestHeader(value = "X-Guest-Id", required = false) String guestId,
+            @Valid @RequestBody ChatSessionDeleteRequest request
+    ) {
+        return CommonResponse.success(chatSessionDeleteService.deleteSessions(guestId, request));
     }
 }

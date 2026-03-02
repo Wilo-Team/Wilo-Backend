@@ -4,10 +4,12 @@ import com.wilo.server.chatbot.entity.ChatSession;
 import com.wilo.server.chatbot.entity.ChatSessionStatus;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,4 +51,26 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
     Optional<ChatSession> findByIdWithChatbotType(
             @Param("sessionId") Long sessionId
     );
+
+    @Query("""
+        select s.id
+        from ChatSession s
+        where s.id in :ids
+          and (
+            (:userId is not null and s.userId = :userId)
+            or (:userId is null and :guestId is not null and s.guestId = :guestId)
+          )
+    """)
+    List<Long> findOwnedSessionIds(
+            @Param("ids") Collection<Long> ids,
+            @Param("userId") Long userId,
+            @Param("guestId") String guestId
+    );
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+        delete from ChatSession s
+        where s.id in :ids
+    """)
+    int deleteByIds(@Param("ids") Collection<Long> ids);
 }
