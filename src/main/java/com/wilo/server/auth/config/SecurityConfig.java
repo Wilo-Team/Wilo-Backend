@@ -53,6 +53,7 @@ public class SecurityConfig {
                                 .requestMatchers("/api/v1/chat/**").permitAll()
                                 .requestMatchers("/api/v1/guest/**").permitAll()
                                 .requestMatchers(HttpMethod.GET, "/api/v1/community/posts/**").permitAll()
+                                .requestMatchers(HttpMethod.GET, "/api/v1/community/users/**").permitAll()
                                 .anyRequest().authenticated()
                 )
                 .sessionManagement(sessionManagement ->

@@ -343,6 +343,181 @@ class CommunityControllerTest {
                 .andExpect(jsonPath("$.errorCode").value(5004));
     }
 
+    @Test
+    void getPostsByAuthor_latestCursorPagination_success() throws Exception {
+        User author = saveUser("author-list@example.com", "authorList");
+        User other = saveUser("other-list@example.com", "otherList");
+
+        for (int i = 0; i < 3; i++) {
+            communityPostRepository.save(
+                    CommunityPost.builder()
+                            .user(author)
+                            .category(CommunityCategory.TREE_SHADE)
+                            .title("작성자 글 " + i)
+                            .content("작성자 본문 " + i)
+                            .build()
+            );
+        }
+
+        communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(other)
+                        .category(CommunityCategory.SUNNY_PLACE)
+                        .title("다른 사람 글")
+                        .content("다른 사람 본문")
+                        .build()
+        );
+
+        MvcResult firstPageResult = mockMvc.perform(get("/api/v1/community/users/{userId}/posts", author.getId())
+                        .param("size", "2"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(2))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].title").value("작성자 글 2"))
+                .andReturn();
+        printPrettyResponse(firstPageResult);
+
+        JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
+        String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
+
+        mockMvc.perform(get("/api/v1/community/users/{userId}/posts", author.getId())
+                        .param("size", "2")
+                        .param("cursor", nextCursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].title").value("작성자 글 0"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    void getCommentsByAuthor_latestCursorPagination_success() throws Exception {
+        User postAuthor = saveUser("post-owner@example.com", "postOwner");
+        User commenter = saveUser("comment-owner@example.com", "commentOwner");
+        User other = saveUser("other-commenter@example.com", "otherCommenter");
+
+        CommunityPost post1 = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(postAuthor)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("댓글 대상 글 1")
+                        .content("본문1")
+                        .build()
+        );
+        CommunityPost post2 = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(postAuthor)
+                        .category(CommunityCategory.SUNNY_PLACE)
+                        .title("댓글 대상 글 2")
+                        .content("본문2")
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post1.getId())
+                        .with(authentication(new JwtAuthentication(commenter.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"content":"내 댓글 1"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post2.getId())
+                        .with(authentication(new JwtAuthentication(commenter.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"content":"내 댓글 2"}
+                                """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/comments", post2.getId())
+                        .with(authentication(new JwtAuthentication(other.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"content":"다른 사람 댓글"}
+                                """))
+                .andExpect(status().isOk());
+
+        MvcResult firstPageResult = mockMvc.perform(get("/api/v1/community/users/{userId}/comments", commenter.getId())
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].postTitle").value("댓글 대상 글 2"))
+                .andExpect(jsonPath("$.data.items[0].content").value("내 댓글 2"))
+                .andReturn();
+        printPrettyResponse(firstPageResult);
+
+        JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
+        String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
+
+        mockMvc.perform(get("/api/v1/community/users/{userId}/comments", commenter.getId())
+                        .param("size", "1")
+                        .param("cursor", nextCursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].postTitle").value("댓글 대상 글 1"))
+                .andExpect(jsonPath("$.data.items[0].content").value("내 댓글 1"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    void getLikedPostsByUser_latestCursorPagination_success() throws Exception {
+        User postAuthor = saveUser("liked-post-author@example.com", "likedPostAuthor");
+        User liker = saveUser("liked-user@example.com", "likedUser");
+        User other = saveUser("liked-other@example.com", "likedOther");
+
+        CommunityPost post1 = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(postAuthor)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("좋아요 글 1")
+                        .content("본문1")
+                        .build()
+        );
+        CommunityPost post2 = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(postAuthor)
+                        .category(CommunityCategory.SUNNY_PLACE)
+                        .title("좋아요 글 2")
+                        .content("본문2")
+                        .build()
+        );
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post1.getId())
+                        .with(authentication(new JwtAuthentication(liker.getId()))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post2.getId())
+                        .with(authentication(new JwtAuthentication(liker.getId()))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/api/v1/community/posts/{postId}/likes", post2.getId())
+                        .with(authentication(new JwtAuthentication(other.getId()))))
+                .andExpect(status().isOk());
+
+        MvcResult firstPageResult = mockMvc.perform(get("/api/v1/community/users/{userId}/liked-posts", liker.getId())
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
+                .andExpect(jsonPath("$.data.items[0].title").value("좋아요 글 2"))
+                .andReturn();
+        printPrettyResponse(firstPageResult);
+
+        JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
+        String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
+
+        mockMvc.perform(get("/api/v1/community/users/{userId}/liked-posts", liker.getId())
+                        .param("size", "1")
+                        .param("cursor", nextCursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].title").value("좋아요 글 1"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
     private User saveUser(String email, String nickname) {
         return userRepository.save(
                 User.builder()

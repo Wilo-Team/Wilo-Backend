@@ -9,6 +9,8 @@ import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
 import com.wilo.server.community.dto.CommunityPostListResponseDto;
 import com.wilo.server.community.dto.CommunityPostSummaryDto;
 import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.CommunityUserCommentListResponseDto;
+import com.wilo.server.community.dto.CommunityUserCommentSummaryDto;
 import com.wilo.server.community.entity.CommunityCategory;
 import com.wilo.server.community.entity.CommunityComment;
 import com.wilo.server.community.entity.CommunityPost;
@@ -147,20 +149,7 @@ public class CommunityService {
         boolean hasNext = fetchedPosts.size() > safeSize;
         List<CommunityPost> pagePosts = hasNext ? fetchedPosts.subList(0, safeSize) : fetchedPosts;
 
-        List<CommunityPostSummaryDto> items = pagePosts.stream()
-                .map(post -> new CommunityPostSummaryDto(
-                        post.getId(),
-                        post.getCategory(),
-                        post.getCategory().getDisplayName(),
-                        post.getTitle(),
-                        createPreview(post.getContent()),
-                        post.getCreatedAt(),
-                        calculateDaysAgo(post.getCreatedAt()),
-                        post.getViewCount(),
-                        post.getLikeCount(),
-                        post.getCommentCount()
-                ))
-                .toList();
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
 
         String nextCursor = null;
         if (hasNext && !pagePosts.isEmpty()) {
@@ -169,6 +158,110 @@ public class CommunityService {
                 case LATEST -> LatestCursor.of(lastPost).toCursorValue();
                 case RECOMMENDED -> RecommendedCursor.of(lastPost).toCursorValue();
             };
+        }
+
+        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityPostListResponseDto getPostsByAuthor(
+            Long authorUserId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityPost> fetchedPosts = communityPostRepository.findLatestPostsByAuthorCursor(
+                authorUserId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedPosts.size() > safeSize;
+        List<CommunityPost> pagePosts = hasNext ? fetchedPosts.subList(0, safeSize) : fetchedPosts;
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
+
+        String nextCursor = null;
+        if (hasNext && !pagePosts.isEmpty()) {
+            CommunityPost lastPost = pagePosts.get(pagePosts.size() - 1);
+            nextCursor = LatestCursor.of(lastPost).toCursorValue();
+        }
+
+        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityUserCommentListResponseDto getCommentsByAuthor(
+            Long authorUserId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityComment> fetchedComments = communityCommentRepository.findLatestByUserIdCursor(
+                authorUserId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedComments.size() > safeSize;
+        List<CommunityComment> pageComments = hasNext ? fetchedComments.subList(0, safeSize) : fetchedComments;
+
+        List<CommunityUserCommentSummaryDto> items = pageComments.stream()
+                .map(comment -> new CommunityUserCommentSummaryDto(
+                        comment.getId(),
+                        comment.getPost().getId(),
+                        comment.getPost().getTitle(),
+                        comment.getContent(),
+                        comment.getCreatedAt(),
+                        calculateDaysAgo(comment.getCreatedAt())
+                ))
+                .toList();
+
+        String nextCursor = null;
+        if (hasNext && !pageComments.isEmpty()) {
+            CommunityComment lastComment = pageComments.get(pageComments.size() - 1);
+            nextCursor = lastComment.getCreatedAt() + "|" + lastComment.getId();
+        }
+
+        return new CommunityUserCommentListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityPostListResponseDto getLikedPostsByUser(
+            Long userId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityPostLike> fetchedLikes = communityPostLikeRepository.findLikedPostsByUserIdCursor(
+                userId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedLikes.size() > safeSize;
+        List<CommunityPostLike> pageLikes = hasNext ? fetchedLikes.subList(0, safeSize) : fetchedLikes;
+        List<CommunityPost> pagePosts = pageLikes.stream()
+                .map(CommunityPostLike::getPost)
+                .toList();
+
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
+
+        String nextCursor = null;
+        if (hasNext && !pageLikes.isEmpty()) {
+            CommunityPostLike lastLike = pageLikes.get(pageLikes.size() - 1);
+            nextCursor = lastLike.getCreatedAt() + "|" + lastLike.getId();
         }
 
         return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
@@ -321,6 +414,23 @@ public class CommunityService {
     private CommunityPost getPostOrThrow(Long postId) {
         return communityPostRepository.findById(postId)
                 .orElseThrow(() -> ApplicationException.from(CommunityErrorCase.POST_NOT_FOUND));
+    }
+
+    private List<CommunityPostSummaryDto> toSummaryItems(List<CommunityPost> posts) {
+        return posts.stream()
+                .map(post -> new CommunityPostSummaryDto(
+                        post.getId(),
+                        post.getCategory(),
+                        post.getCategory().getDisplayName(),
+                        post.getTitle(),
+                        createPreview(post.getContent()),
+                        post.getCreatedAt(),
+                        calculateDaysAgo(post.getCreatedAt()),
+                        post.getViewCount(),
+                        post.getLikeCount(),
+                        post.getCommentCount()
+                ))
+                .toList();
     }
 
     private long calculateDaysAgo(LocalDateTime createdAt) {

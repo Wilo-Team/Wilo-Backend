@@ -1,11 +1,12 @@
 package com.wilo.server.community.repository;
 
 import com.wilo.server.community.entity.CommunityPostLike;
+import com.wilo.server.community.repository.query.CommunityPostLikeQueryRepository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CommunityPostLikeRepository extends JpaRepository<CommunityPostLike, Long> {
+public interface CommunityPostLikeRepository extends JpaRepository<CommunityPostLike, Long>, CommunityPostLikeQueryRepository {
 
     boolean existsByPostIdAndUserId(Long postId, Long userId);
 

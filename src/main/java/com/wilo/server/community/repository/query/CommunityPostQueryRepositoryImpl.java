@@ -60,6 +60,24 @@ public class CommunityPostQueryRepositoryImpl implements CommunityPostQueryRepos
                 .fetch();
     }
 
+    @Override
+    public List<CommunityPost> findLatestPostsByAuthorCursor(
+            Long authorUserId,
+            LocalDateTime cursorCreatedAt,
+            Long cursorId,
+            Pageable pageable
+    ) {
+        return queryFactory
+                .selectFrom(post)
+                .where(
+                        authorUserIdEq(authorUserId),
+                        latestCursorCondition(cursorCreatedAt, cursorId)
+                )
+                .orderBy(post.createdAt.desc(), post.id.desc())
+                .limit(pageable.getPageSize())
+                .fetch();
+    }
+
     private BooleanExpression categoryEq(CommunityCategory category) {
         if (category == null) {
             return null;
@@ -75,6 +93,13 @@ public class CommunityPostQueryRepositoryImpl implements CommunityPostQueryRepos
         String normalized = keyword.toLowerCase();
         return post.title.lower().contains(normalized)
                 .or(post.content.lower().contains(normalized));
+    }
+
+    private BooleanExpression authorUserIdEq(Long authorUserId) {
+        if (authorUserId == null) {
+            return null;
+        }
+        return post.user.id.eq(authorUserId);
     }
 
     private BooleanExpression latestCursorCondition(LocalDateTime cursorCreatedAt, Long cursorId) {
