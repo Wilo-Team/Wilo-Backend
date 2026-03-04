@@ -5,12 +5,14 @@ import com.wilo.server.chatbot.repository.ChatbotTypeRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 @Component
 @RequiredArgsConstructor
+@Order(1)
 @Transactional
 public class ChatbotTypeSeeder implements ApplicationRunner {
 
