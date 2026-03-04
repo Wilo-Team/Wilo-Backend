@@ -1,15 +1,18 @@
 package com.wilo.server.auth.service;
 
 import com.wilo.server.auth.dto.LoginRequestDto;
+import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
 import com.wilo.server.auth.dto.SignUpRequestDto;
 import com.wilo.server.auth.dto.TokenRequestDto;
 import com.wilo.server.auth.dto.TokenResponseDto;
 import com.wilo.server.auth.error.AuthErrorCase;
+import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.auth.repository.RefreshTokenRepository;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
 import com.wilo.server.global.config.security.jwt.JwtTokenProvider;
 import com.wilo.server.global.exception.ApplicationException;
+import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -19,8 +22,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final PhoneVerificationCodeRepository phoneVerificationCodeRepository;
+    private final SolapiSmsService solapiSmsService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -95,6 +102,15 @@ public class AuthService {
         refreshTokenRepository.deleteByUserId(userId);
     }
 
+    @Transactional
+    public void sendPhoneVerificationCode(PhoneVerificationSendRequestDto request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+        String verificationCode = createVerificationCode();
+
+        solapiSmsService.sendVerificationCode(normalizedPhoneNumber, verificationCode);
+        phoneVerificationCodeRepository.save(normalizedPhoneNumber, verificationCode);
+    }
+
     private TokenResponseDto issueAndSaveTokens(Long userId) {
         String accessToken = jwtTokenProvider.generateAccessToken(userId);
         String refreshToken = jwtTokenProvider.generateRefreshToken(userId);
@@ -110,5 +126,14 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    private String normalizePhoneNumber(String phoneNumber) {
+        return phoneNumber.replaceAll("\\D", "");
+    }
+
+    private String createVerificationCode() {
+        int code = SECURE_RANDOM.nextInt(1_000_000);
+        return String.format("%06d", code);
     }
 }

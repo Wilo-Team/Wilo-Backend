@@ -1,6 +1,7 @@
 package com.wilo.server.auth.controller;
 
 import com.wilo.server.auth.dto.LoginRequestDto;
+import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
 import com.wilo.server.auth.dto.SignUpRequestDto;
 import com.wilo.server.auth.dto.TokenRequestDto;
 import com.wilo.server.auth.dto.TokenResponseDto;
@@ -68,5 +69,25 @@ public class AuthController {
     public CommonResponse<String> logout(@RequestBody(required = false) TokenRequestDto tokenRequestDto) {
         authService.logout(tokenRequestDto);
         return CommonResponse.success("로그아웃 되었습니다.");
+    }
+
+    @PostMapping("/phone-verification/send")
+    @Operation(
+            summary = "휴대폰 인증번호 발송",
+            description = """
+                    입력한 전화번호로 6자리 인증번호를 발송합니다.
+                    인증번호는 Redis에 3분 TTL로 저장됩니다.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증번호 발송 성공"),
+            @ApiResponse(responseCode = "400", description = "전화번호 형식 오류", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 Solapi 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> sendPhoneVerificationCode(
+            @Valid @RequestBody PhoneVerificationSendRequestDto request
+    ) {
+        authService.sendPhoneVerificationCode(request);
+        return CommonResponse.success("인증번호가 발송되었습니다.");
     }
 }

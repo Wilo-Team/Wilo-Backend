@@ -55,3 +55,8 @@ cloud:
     credentials:
       access-key: test
       secret-key: test
+
+solapi:
+  access-key: test
+  secret-key: test
+  sender-phone: 01012345678

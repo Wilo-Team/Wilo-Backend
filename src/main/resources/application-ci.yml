@@ -49,3 +49,8 @@ cloud:
     credentials:
       access-key: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY:dummy}
       secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY:dummy}
+
+solapi:
+  access-key: ${SOLAPI_ACCESS_KEY:}
+  secret-key: ${SOLAPI_SECRET_KEY:}
+  sender-phone: ${SOLAPI_SENDER_PHONE:}
