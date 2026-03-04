@@ -2,9 +2,9 @@ package com.wilo.server.community.repository.query;
 
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import com.wilo.server.community.entity.CommunityComment;
-import com.wilo.server.community.entity.QCommunityComment;
-import com.wilo.server.community.entity.QCommunityPost;
+import com.wilo.server.community.entity.comment.CommunityComment;
+import com.wilo.server.community.entity.comment.QCommunityComment;
+import com.wilo.server.community.entity.post.QCommunityPost;
 import java.time.LocalDateTime;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

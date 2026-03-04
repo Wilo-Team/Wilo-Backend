@@ -1,4 +1,4 @@
-package com.wilo.server.community.entity;
+package com.wilo.server.community.entity.post;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

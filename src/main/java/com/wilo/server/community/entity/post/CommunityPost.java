@@ -1,5 +1,6 @@
-package com.wilo.server.community.entity;
+package com.wilo.server.community.entity.post;
 
+import com.wilo.server.community.entity.comment.CommunityComment;
 import com.wilo.server.global.entity.BaseEntity;
 import com.wilo.server.user.entity.User;
 import jakarta.persistence.*;

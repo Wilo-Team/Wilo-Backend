@@ -1,6 +1,6 @@
 package com.wilo.server.community.repository;
 
-import com.wilo.server.community.entity.CommunityPostLike;
+import com.wilo.server.community.entity.post.CommunityPostLike;
 import com.wilo.server.community.repository.query.CommunityPostLikeQueryRepository;
 import java.util.List;
 import java.util.Optional;

@@ -1,7 +1,7 @@
 package com.wilo.server.notification.service;
 
-import com.wilo.server.community.entity.CommunityComment;
-import com.wilo.server.community.entity.CommunityPost;
+import com.wilo.server.community.entity.comment.CommunityComment;
+import com.wilo.server.community.entity.post.CommunityPost;
 import com.wilo.server.notification.dto.NotificationListResponseDto;
 import com.wilo.server.notification.dto.NotificationSummaryDto;
 import com.wilo.server.notification.entity.NotificationType;

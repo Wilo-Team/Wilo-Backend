@@ -1,6 +1,6 @@
 package com.wilo.server.community.repository;
 
-import com.wilo.server.community.entity.CommunityPostImage;
+import com.wilo.server.community.entity.post.CommunityPostImage;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 

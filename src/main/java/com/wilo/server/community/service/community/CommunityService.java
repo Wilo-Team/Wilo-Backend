@@ -1,22 +1,21 @@
-package com.wilo.server.community.service;
+package com.wilo.server.community.service.community;
 
-import com.wilo.server.community.dto.CommunityCommentCreateRequestDto;
-import com.wilo.server.community.dto.CommunityCommentDto;
-import com.wilo.server.community.dto.CommunityLikeResponseDto;
-import com.wilo.server.community.dto.CommunityPostAuthorDto;
-import com.wilo.server.community.dto.CommunityPostCreateRequestDto;
-import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
-import com.wilo.server.community.dto.CommunityPostListResponseDto;
-import com.wilo.server.community.dto.CommunityPostSummaryDto;
-import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
-import com.wilo.server.community.dto.CommunityUserCommentListResponseDto;
-import com.wilo.server.community.dto.CommunityUserCommentSummaryDto;
-import com.wilo.server.community.entity.CommunityCategory;
-import com.wilo.server.community.entity.CommunityComment;
-import com.wilo.server.community.entity.CommunityPost;
-import com.wilo.server.community.entity.CommunityPostImage;
-import com.wilo.server.community.entity.CommunityPostLike;
-import com.wilo.server.community.entity.CommunityPostSortType;
+import com.wilo.server.community.dto.comment.CommunityCommentCreateRequestDto;
+import com.wilo.server.community.dto.comment.CommunityCommentDto;
+import com.wilo.server.community.dto.post.CommunityLikeResponseDto;
+import com.wilo.server.community.dto.comment.CommunityPostAuthorDto;
+import com.wilo.server.community.dto.post.CommunityPostCreateRequestDto;
+import com.wilo.server.community.dto.post.CommunityPostDetailResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostListResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostSummaryDto;
+import com.wilo.server.community.dto.post.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.comment.CommunityUserCommentListResponseDto;
+import com.wilo.server.community.dto.comment.CommunityUserCommentSummaryDto;
+import com.wilo.server.community.entity.post.CommunityCategory;
+import com.wilo.server.community.entity.comment.CommunityComment;
+import com.wilo.server.community.entity.post.CommunityPost;
+import com.wilo.server.community.entity.post.CommunityPostImage;
+import com.wilo.server.community.entity.post.CommunityPostLike;
 import com.wilo.server.community.error.CommunityErrorCase;
 import com.wilo.server.community.repository.CommunityCommentRepository;
 import com.wilo.server.community.repository.CommunityPostImageRepository;
@@ -108,59 +107,6 @@ public class CommunityService {
         }
 
         communityPostRepository.delete(post);
-    }
-
-    @Transactional(readOnly = true)
-    public CommunityPostListResponseDto getPosts(
-            CommunityCategory category,
-            CommunityPostSortType sort,
-            String keyword,
-            String cursor,
-            Integer size
-    ) {
-        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
-        CommunityPostSortType sortType = sort == null ? CommunityPostSortType.RECOMMENDED : sort;
-        Pageable pageable = PageRequest.of(0, safeSize + 1);
-
-        List<CommunityPost> fetchedPosts = switch (sortType) {
-            case LATEST -> {
-                LatestCursor latestCursor = LatestCursor.from(cursor);
-                yield communityPostRepository.findLatestPostsByCursor(
-                        category,
-                        keyword,
-                        latestCursor.createdAt(),
-                        latestCursor.id(),
-                        pageable
-                );
-            }
-            case RECOMMENDED -> {
-                RecommendedCursor recommendedCursor = RecommendedCursor.from(cursor);
-                yield communityPostRepository.findRecommendedPostsByCursor(
-                        category,
-                        keyword,
-                        recommendedCursor.likeCount(),
-                        recommendedCursor.createdAt(),
-                        recommendedCursor.id(),
-                        pageable
-                );
-            }
-        };
-
-        boolean hasNext = fetchedPosts.size() > safeSize;
-        List<CommunityPost> pagePosts = hasNext ? fetchedPosts.subList(0, safeSize) : fetchedPosts;
-
-        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
-
-        String nextCursor = null;
-        if (hasNext && !pagePosts.isEmpty()) {
-            CommunityPost lastPost = pagePosts.get(pagePosts.size() - 1);
-            nextCursor = switch (sortType) {
-                case LATEST -> LatestCursor.of(lastPost).toCursorValue();
-                case RECOMMENDED -> RecommendedCursor.of(lastPost).toCursorValue();
-            };
-        }
-
-        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
     }
 
     @Transactional(readOnly = true)
@@ -474,34 +420,4 @@ public class CommunityService {
         }
     }
 
-    private record RecommendedCursor(Long likeCount, LocalDateTime createdAt, Long id) {
-        private static RecommendedCursor from(String cursor) {
-            if (cursor == null || cursor.isBlank()) {
-                return new RecommendedCursor(null, null, null);
-            }
-
-            String[] parts = cursor.split("\\|");
-            if (parts.length != 3) {
-                return new RecommendedCursor(null, null, null);
-            }
-
-            try {
-                return new RecommendedCursor(
-                        Long.parseLong(parts[0]),
-                        LocalDateTime.parse(parts[1]),
-                        Long.parseLong(parts[2])
-                );
-            } catch (RuntimeException e) {
-                return new RecommendedCursor(null, null, null);
-            }
-        }
-
-        private static RecommendedCursor of(CommunityPost post) {
-            return new RecommendedCursor(post.getLikeCount(), post.getCreatedAt(), post.getId());
-        }
-
-        private String toCursorValue() {
-            return likeCount + "|" + createdAt + "|" + id;
-        }
-    }
 }

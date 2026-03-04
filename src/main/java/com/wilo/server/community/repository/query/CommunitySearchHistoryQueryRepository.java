@@ -1,15 +1,15 @@
 package com.wilo.server.community.repository.query;
 
-import com.wilo.server.community.entity.comment.CommunityComment;
+import com.wilo.server.community.entity.search.CommunitySearchHistory;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 
-public interface CommunityCommentQueryRepository {
+public interface CommunitySearchHistoryQueryRepository {
 
-    List<CommunityComment> findLatestByUserIdCursor(
+    List<CommunitySearchHistory> findLatestByUserIdCursor(
             Long userId,
-            LocalDateTime cursorCreatedAt,
+            LocalDateTime cursorLastSearchedAt,
             Long cursorId,
             Pageable pageable
     );
