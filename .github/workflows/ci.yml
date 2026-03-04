@@ -54,6 +54,7 @@ jobs:
       CLOUD_AWS_CREDENTIALS_SECRET_KEY: dummy
       CLOUD_AWS_REGION: ap-northeast-2
 
+      CRYPTO_KEY: ${{ secrets.CRYPTO_KEY }}
       SOLAPI_ACCESS_KEY: ${{ secrets.SOLAPI_ACCESS_KEY }}
       SOLAPI_SECRET_KEY: ${{ secrets.SOLAPI_SECRET_KEY }}
       SOLAPI_SENDER_PHONE: ${{ secrets.SOLAPI_SENDER_PHONE }}

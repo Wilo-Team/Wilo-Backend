@@ -1,6 +1,7 @@
 package com.wilo.server.user.entity;
 
 import com.wilo.server.global.entity.BaseEntity;
+import com.wilo.server.user.service.CryptoConverter;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -30,6 +31,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @Convert(converter = CryptoConverter.class)
     @Column(nullable = false, length = 255)
     private String password;
 
