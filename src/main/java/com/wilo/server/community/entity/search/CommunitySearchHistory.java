@@ -1,4 +1,4 @@
-package com.wilo.server.community.entity;
+package com.wilo.server.community.entity.search;
 
 import com.wilo.server.global.entity.BaseEntity;
 import com.wilo.server.user.entity.User;

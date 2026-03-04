@@ -1,6 +1,6 @@
 package com.wilo.server.community.repository.query;
 
-import com.wilo.server.community.entity.CommunitySearchHistory;
+import com.wilo.server.community.entity.search.CommunitySearchHistory;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Pageable;

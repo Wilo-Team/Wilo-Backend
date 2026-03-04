@@ -1,18 +1,19 @@
 package com.wilo.server.community.controller;
 
 import com.wilo.server.auth.error.AuthErrorCase;
-import com.wilo.server.community.dto.CommunityCommentCreateRequestDto;
-import com.wilo.server.community.dto.CommunityCommentDto;
-import com.wilo.server.community.dto.CommunityLikeResponseDto;
-import com.wilo.server.community.dto.CommunityPostCreateRequestDto;
-import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
-import com.wilo.server.community.dto.CommunityPostListResponseDto;
-import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
-import com.wilo.server.community.dto.CommunitySearchHistoryListResponseDto;
-import com.wilo.server.community.dto.CommunityUserCommentListResponseDto;
-import com.wilo.server.community.entity.CommunityCategory;
-import com.wilo.server.community.entity.CommunityPostSortType;
-import com.wilo.server.community.service.CommunityService;
+import com.wilo.server.community.dto.comment.CommunityCommentCreateRequestDto;
+import com.wilo.server.community.dto.comment.CommunityCommentDto;
+import com.wilo.server.community.dto.post.CommunityLikeResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostCreateRequestDto;
+import com.wilo.server.community.dto.post.CommunityPostDetailResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostListResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.search.CommunitySearchHistoryListResponseDto;
+import com.wilo.server.community.dto.comment.CommunityUserCommentListResponseDto;
+import com.wilo.server.community.entity.post.CommunityCategory;
+import com.wilo.server.community.entity.post.CommunityPostSortType;
+import com.wilo.server.community.service.community.CommunityService;
+import com.wilo.server.community.service.search.CommunitySearchService;
 import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CommunityController {
 
     private final CommunityService communityService;
+    private final CommunitySearchService communitySearchService;
 
     @PostMapping("/posts")
     @Operation(summary = "게시글 작성", description = "카테고리/제목/내용/이미지 URL로 게시글을 생성합니다.")
@@ -153,7 +155,7 @@ public class CommunityController {
             @RequestParam(defaultValue = "20") Integer size
         ) {
         Long userId = extractUserIdIfPresent();
-        return CommonResponse.success(communityService.getPosts(userId, category, sort, keyword, cursor, size));
+        return CommonResponse.success(communitySearchService.getPosts(userId, category, sort, keyword, cursor, size));
     }
 
     @GetMapping("/users/{userId}/posts")
@@ -251,7 +253,7 @@ public class CommunityController {
             @RequestParam(defaultValue = "20") Integer size
     ) {
         Long userId = extractUserId();
-        return CommonResponse.success(communityService.getSearchHistories(userId, cursor, size));
+        return CommonResponse.success(communitySearchService.getSearchHistories(userId, cursor, size));
     }
 
     @DeleteMapping("/search-histories/{historyId}")
@@ -277,7 +279,7 @@ public class CommunityController {
     })
     public CommonResponse<String> deleteSearchHistory(@PathVariable Long historyId) {
         Long userId = extractUserId();
-        communityService.deleteSearchHistory(userId, historyId);
+        communitySearchService.deleteSearchHistory(userId, historyId);
         return CommonResponse.success("검색 기록이 삭제되었습니다.");
     }
 
@@ -285,7 +287,7 @@ public class CommunityController {
     @Operation(summary = "검색 기록 전체 삭제", description = "내 검색 기록 전체를 삭제하고 삭제 건수를 반환합니다.")
     public CommonResponse<Integer> deleteAllSearchHistories() {
         Long userId = extractUserId();
-        return CommonResponse.success(communityService.deleteAllSearchHistories(userId));
+        return CommonResponse.success(communitySearchService.deleteAllSearchHistories(userId));
     }
 
     @GetMapping("/posts/{postId}")

@@ -10,8 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wilo.server.community.entity.CommunityCategory;
-import com.wilo.server.community.entity.CommunityPost;
+import com.wilo.server.community.entity.post.CommunityCategory;
+import com.wilo.server.community.entity.post.CommunityPost;
 import com.wilo.server.community.repository.CommunityCommentRepository;
 import com.wilo.server.community.repository.CommunityPostImageRepository;
 import com.wilo.server.community.repository.CommunityPostLikeRepository;

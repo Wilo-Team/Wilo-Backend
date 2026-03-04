@@ -1,7 +1,7 @@
 package com.wilo.server.community.repository.query;
 
-import com.wilo.server.community.entity.CommunityCategory;
-import com.wilo.server.community.entity.CommunityPost;
+import com.wilo.server.community.entity.post.CommunityCategory;
+import com.wilo.server.community.entity.post.CommunityPost;
 import java.time.LocalDateTime;
 import java.util.List;
 import org.springframework.data.domain.Pageable;

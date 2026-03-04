@@ -1,4 +1,4 @@
-package com.wilo.server.community.dto;
+package com.wilo.server.community.dto.search;
 
 import java.time.LocalDateTime;
 

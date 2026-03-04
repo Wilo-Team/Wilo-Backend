@@ -1,6 +1,6 @@
 package com.wilo.server.community.repository;
 
-import com.wilo.server.community.entity.CommunitySearchHistory;
+import com.wilo.server.community.entity.search.CommunitySearchHistory;
 import com.wilo.server.community.repository.query.CommunitySearchHistoryQueryRepository;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;

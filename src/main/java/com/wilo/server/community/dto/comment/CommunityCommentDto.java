@@ -1,4 +1,4 @@
-package com.wilo.server.community.dto;
+package com.wilo.server.community.dto.comment;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

@@ -1,12 +1,12 @@
-package com.wilo.server.community.dto;
+package com.wilo.server.community.dto.post;
 
-import com.wilo.server.community.entity.CommunityCategory;
+import com.wilo.server.community.entity.post.CommunityCategory;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
-public record CommunityPostUpdateRequestDto(
+public record CommunityPostCreateRequestDto(
         @NotNull(message = "카테고리는 필수입니다.")
         CommunityCategory category,
 
