@@ -42,6 +42,10 @@ public class ChatMessage extends BaseEntity {
     @Column(name = "choices_json")
     private String choicesJson;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "feedback_type", length = 20)
+    private MessageFeedbackType feedbackType;
+
     private static String requireContent(String content) {
         if (content == null || content.isBlank()) {
             throw new IllegalArgumentException("content는 비어 있을 수 없습니다.");
@@ -69,5 +73,9 @@ public class ChatMessage extends BaseEntity {
         m.safetyStatus = safetyStatus;
         m.choicesJson = choicesJson;
         return m;
+    }
+
+    public void updateFeedback(MessageFeedbackType feedbackType) {
+        this.feedbackType = feedbackType;
     }
 }
