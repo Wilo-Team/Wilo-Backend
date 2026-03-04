@@ -7,7 +7,8 @@ public record UserResponseDto(
         String email,
         String nickname,
         String description,
-        String profileImageUrl
+        String profileImageUrl,
+        String phoneNumber
 ) {
     public static UserResponseDto from(User user) {
         return new UserResponseDto(
@@ -15,7 +16,8 @@ public record UserResponseDto(
                 user.getEmail(),
                 user.getNickname(),
                 user.getDescription(),
-                user.getProfileImageUrl()
+                user.getProfileImageUrl(),
+                user.getPhoneNumber()
         );
     }
 }

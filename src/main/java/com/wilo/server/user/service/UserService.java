@@ -36,7 +36,11 @@ public class UserService {
             throw ApplicationException.from(UserErrorCase.NICKNAME_ALREADY_EXISTS);
         }
 
-        user.updateProfile(request.nickname(), request.description());
+        String normalizedPhoneNumber = request.phoneNumber() == null
+                ? null
+                : request.phoneNumber().replaceAll("\\D", "");
+
+        user.updateProfile(request.nickname(), request.description(), normalizedPhoneNumber);
         return UserResponseDto.from(user);
     }
 

@@ -50,6 +50,7 @@ public class AuthService {
                         .nickname(request.nickname())
                         .description(request.description())
                         .profileImageUrl(request.profileImageUrl())
+                        .phoneNumber(request.phoneNumber() == null ? null : normalizePhoneNumber(request.phoneNumber()))
                         .build()
         );
 

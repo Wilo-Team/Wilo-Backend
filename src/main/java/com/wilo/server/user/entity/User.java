@@ -41,18 +41,23 @@ public class User extends BaseEntity {
     @Column(length = 512)
     private String profileImageUrl;
 
+    @Column(length = 20)
+    private String phoneNumber;
+
     @Builder
-    private User(String email, String password, String nickname, String description, String profileImageUrl) {
+    private User(String email, String password, String nickname, String description, String profileImageUrl, String phoneNumber) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.description = description;
         this.profileImageUrl = profileImageUrl;
+        this.phoneNumber = phoneNumber;
     }
 
-    public void updateProfile(String nickname, String description) {
+    public void updateProfile(String nickname, String description, String phoneNumber) {
         this.nickname = nickname;
         this.description = description;
+        this.phoneNumber = phoneNumber;
     }
 
     public void updateProfileImageUrl(String profileImageUrl) {
