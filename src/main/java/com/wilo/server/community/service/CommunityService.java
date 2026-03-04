@@ -9,6 +9,8 @@ import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
 import com.wilo.server.community.dto.CommunityPostListResponseDto;
 import com.wilo.server.community.dto.CommunityPostSummaryDto;
 import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.CommunitySearchHistoryItemDto;
+import com.wilo.server.community.dto.CommunitySearchHistoryListResponseDto;
 import com.wilo.server.community.dto.CommunityUserCommentListResponseDto;
 import com.wilo.server.community.dto.CommunityUserCommentSummaryDto;
 import com.wilo.server.community.entity.CommunityCategory;
@@ -17,11 +19,13 @@ import com.wilo.server.community.entity.CommunityPost;
 import com.wilo.server.community.entity.CommunityPostImage;
 import com.wilo.server.community.entity.CommunityPostLike;
 import com.wilo.server.community.entity.CommunityPostSortType;
+import com.wilo.server.community.entity.CommunitySearchHistory;
 import com.wilo.server.community.error.CommunityErrorCase;
 import com.wilo.server.community.repository.CommunityCommentRepository;
 import com.wilo.server.community.repository.CommunityPostImageRepository;
 import com.wilo.server.community.repository.CommunityPostLikeRepository;
 import com.wilo.server.community.repository.CommunityPostRepository;
+import com.wilo.server.community.repository.CommunitySearchHistoryRepository;
 import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.notification.service.NotificationService;
 import com.wilo.server.user.entity.User;
@@ -51,6 +55,7 @@ public class CommunityService {
     private final CommunityPostImageRepository communityPostImageRepository;
     private final CommunityCommentRepository communityCommentRepository;
     private final CommunityPostLikeRepository communityPostLikeRepository;
+    private final CommunitySearchHistoryRepository communitySearchHistoryRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
 
@@ -112,12 +117,15 @@ public class CommunityService {
 
     @Transactional(readOnly = true)
     public CommunityPostListResponseDto getPosts(
+            Long requesterUserId,
             CommunityCategory category,
             CommunityPostSortType sort,
             String keyword,
             String cursor,
             Integer size
     ) {
+        saveSearchKeywordIfNeeded(requesterUserId, keyword);
+
         int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
         CommunityPostSortType sortType = sort == null ? CommunityPostSortType.RECOMMENDED : sort;
         Pageable pageable = PageRequest.of(0, safeSize + 1);
@@ -161,6 +169,62 @@ public class CommunityService {
         }
 
         return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunitySearchHistoryListResponseDto getSearchHistories(
+            Long userId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunitySearchHistory> fetchedHistories = communitySearchHistoryRepository.findLatestByUserIdCursor(
+                userId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedHistories.size() > safeSize;
+        List<CommunitySearchHistory> pageHistories = hasNext
+                ? fetchedHistories.subList(0, safeSize)
+                : fetchedHistories;
+
+        List<CommunitySearchHistoryItemDto> items = pageHistories.stream()
+                .map(history -> new CommunitySearchHistoryItemDto(
+                        history.getId(),
+                        history.getKeyword(),
+                        history.getLastSearchedAt()
+                ))
+                .toList();
+
+        String nextCursor = null;
+        if (hasNext && !pageHistories.isEmpty()) {
+            CommunitySearchHistory lastHistory = pageHistories.get(pageHistories.size() - 1);
+            nextCursor = lastHistory.getLastSearchedAt() + "|" + lastHistory.getId();
+        }
+
+        return new CommunitySearchHistoryListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional
+    public void deleteSearchHistory(Long userId, Long historyId) {
+        CommunitySearchHistory history = communitySearchHistoryRepository.findById(historyId)
+                .orElseThrow(() -> ApplicationException.from(CommunityErrorCase.SEARCH_HISTORY_NOT_FOUND));
+
+        if (!history.getUser().getId().equals(userId)) {
+            throw ApplicationException.from(CommunityErrorCase.FORBIDDEN_SEARCH_HISTORY_ACCESS);
+        }
+
+        communitySearchHistoryRepository.delete(history);
+    }
+
+    @Transactional
+    public int deleteAllSearchHistories(Long userId) {
+        return communitySearchHistoryRepository.deleteByUserId(userId);
     }
 
     @Transactional(readOnly = true)
@@ -431,6 +495,30 @@ public class CommunityService {
                         post.getCommentCount()
                 ))
                 .toList();
+    }
+
+    private void saveSearchKeywordIfNeeded(Long userId, String keyword) {
+        if (userId == null || keyword == null || keyword.isBlank()) {
+            return;
+        }
+
+        String normalizedKeyword = keyword.trim();
+        if (normalizedKeyword.isEmpty()) {
+            return;
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        communitySearchHistoryRepository.findByUserIdAndKeyword(userId, normalizedKeyword)
+                .ifPresentOrElse(
+                        history -> history.touch(now),
+                        () -> communitySearchHistoryRepository.save(
+                                CommunitySearchHistory.builder()
+                                        .user(userRepository.getReferenceById(userId))
+                                        .keyword(normalizedKeyword)
+                                        .lastSearchedAt(now)
+                                        .build()
+                        )
+                );
     }
 
     private long calculateDaysAgo(LocalDateTime createdAt) {
