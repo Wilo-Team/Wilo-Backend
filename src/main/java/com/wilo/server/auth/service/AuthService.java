@@ -136,6 +136,8 @@ public class AuthService {
         }
 
         phoneVerificationCodeRepository.deleteByPhoneNumber(normalizedPhoneNumber);
+        userRepository.findAllByPhoneNumber(normalizedPhoneNumber)
+                .forEach(User::markPhoneVerified);
     }
 
     private TokenResponseDto issueAndSaveTokens(Long userId) {

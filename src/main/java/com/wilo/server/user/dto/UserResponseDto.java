@@ -8,7 +8,8 @@ public record UserResponseDto(
         String nickname,
         String description,
         String profileImageUrl,
-        String phoneNumber
+        String phoneNumber,
+        boolean phoneVerified
 ) {
     public static UserResponseDto from(User user) {
         return new UserResponseDto(
@@ -17,7 +18,8 @@ public record UserResponseDto(
                 user.getNickname(),
                 user.getDescription(),
                 user.getProfileImageUrl(),
-                user.getPhoneNumber()
+                user.getPhoneNumber(),
+                user.isPhoneVerified()
         );
     }
 }
