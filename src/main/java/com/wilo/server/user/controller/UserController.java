@@ -1,6 +1,7 @@
 package com.wilo.server.user.controller;
 
 import com.wilo.server.global.response.CommonResponse;
+import com.wilo.server.user.dto.UserPasswordUpdateRequestDto;
 import com.wilo.server.user.dto.UserResponseDto;
 import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.service.UserService;
@@ -90,6 +91,35 @@ public class UserController {
     ) {
         Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         return CommonResponse.success(userService.updateUserProfile(userId, request));
+    }
+
+    @PatchMapping("/password")
+    @Operation(summary = "내 비밀번호 변경", description = "요청으로 받은 새 비밀번호로 변경합니다. 새 비밀번호는 BCrypt로 암호화되어 저장됩니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "변경 성공"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "요청값 검증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":4001,\"message\":\"요청 값이 유효하지 않습니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            )
+    })
+    public CommonResponse<String> updatePassword(
+            @Valid @RequestBody UserPasswordUpdateRequestDto request
+    ) {
+        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        userService.updatePassword(userId, request);
+        return CommonResponse.success("비밀번호가 변경되었습니다.");
     }
 
     @PatchMapping("/profile-image")

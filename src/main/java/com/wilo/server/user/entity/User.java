@@ -2,6 +2,7 @@ package com.wilo.server.user.entity;
 
 import com.wilo.server.global.entity.BaseEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -74,5 +75,9 @@ public class User extends BaseEntity {
 
     public void markPhoneVerified() {
         this.phoneVerified = true;
+    }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 }

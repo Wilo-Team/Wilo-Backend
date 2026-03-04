@@ -3,6 +3,7 @@ package com.wilo.server.user.service;
 import com.wilo.server.files.service.FileService;
 import com.wilo.server.files.exception.FileErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
+import com.wilo.server.user.dto.UserPasswordUpdateRequestDto;
 import com.wilo.server.user.dto.UserResponseDto;
 import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.entity.User;
@@ -10,6 +11,7 @@ import com.wilo.server.user.error.UserErrorCase;
 import com.wilo.server.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +23,7 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final FileService fileService;
+    private final PasswordEncoder passwordEncoder;
 
     @Transactional(readOnly = true)
     public UserResponseDto getUserProfile(Long userId) {
@@ -66,6 +69,13 @@ public class UserService {
         }
 
         return uploadedImageUrl;
+    }
+
+    @Transactional
+    public void updatePassword(Long userId, UserPasswordUpdateRequestDto request) {
+        User user = getUserOrThrow(userId);
+
+        user.updatePassword(passwordEncoder.encode(request.newPassword()));
     }
 
     private User getUserOrThrow(Long userId) {
