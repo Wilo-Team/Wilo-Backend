@@ -1,6 +1,7 @@
 package com.wilo.server.auth.controller;
 
 import com.wilo.server.auth.dto.LoginRequestDto;
+import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
 import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
 import com.wilo.server.auth.dto.SignUpRequestDto;
 import com.wilo.server.auth.dto.TokenRequestDto;
@@ -89,5 +90,24 @@ public class AuthController {
     ) {
         authService.sendPhoneVerificationCode(request);
         return CommonResponse.success("인증번호가 발송되었습니다.");
+    }
+
+    @PostMapping("/phone-verification/confirm")
+    @Operation(
+            summary = "휴대폰 인증번호 검증",
+            description = """
+                    전화번호와 인증번호를 검증합니다.
+                    Redis에 저장된 인증번호(3분 TTL)와 일치하면 인증 성공 처리되고 해당 코드는 즉시 삭제됩니다.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증번호 검증 성공"),
+            @ApiResponse(responseCode = "400", description = "요청 형식 오류 / 인증번호 만료 / 인증번호 불일치", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> confirmPhoneVerificationCode(
+            @Valid @RequestBody PhoneVerificationConfirmRequestDto request
+    ) {
+        authService.confirmPhoneVerificationCode(request);
+        return CommonResponse.success("전화번호 인증이 완료되었습니다.");
     }
 }

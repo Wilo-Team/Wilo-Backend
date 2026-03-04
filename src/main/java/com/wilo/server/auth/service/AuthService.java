@@ -1,6 +1,7 @@
 package com.wilo.server.auth.service;
 
 import com.wilo.server.auth.dto.LoginRequestDto;
+import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
 import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
 import com.wilo.server.auth.dto.SignUpRequestDto;
 import com.wilo.server.auth.dto.TokenRequestDto;
@@ -109,6 +110,20 @@ public class AuthService {
 
         solapiSmsService.sendVerificationCode(normalizedPhoneNumber, verificationCode);
         phoneVerificationCodeRepository.save(normalizedPhoneNumber, verificationCode);
+    }
+
+    @Transactional
+    public void confirmPhoneVerificationCode(PhoneVerificationConfirmRequestDto request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+
+        String savedCode = phoneVerificationCodeRepository.findByPhoneNumber(normalizedPhoneNumber)
+                .orElseThrow(() -> ApplicationException.from(AuthErrorCase.PHONE_VERIFICATION_CODE_EXPIRED));
+
+        if (!savedCode.equals(request.verificationCode())) {
+            throw ApplicationException.from(AuthErrorCase.PHONE_VERIFICATION_CODE_MISMATCH);
+        }
+
+        phoneVerificationCodeRepository.deleteByPhoneNumber(normalizedPhoneNumber);
     }
 
     private TokenResponseDto issueAndSaveTokens(Long userId) {
