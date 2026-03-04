@@ -10,12 +10,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.wilo.server.community.entity.CommunityCategory;
-import com.wilo.server.community.entity.CommunityPost;
+import com.wilo.server.community.entity.post.CommunityCategory;
+import com.wilo.server.community.entity.post.CommunityPost;
 import com.wilo.server.community.repository.CommunityCommentRepository;
 import com.wilo.server.community.repository.CommunityPostImageRepository;
 import com.wilo.server.community.repository.CommunityPostLikeRepository;
 import com.wilo.server.community.repository.CommunityPostRepository;
+import com.wilo.server.community.repository.CommunitySearchHistoryRepository;
 import com.wilo.server.global.config.security.jwt.JwtAuthentication;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
@@ -56,11 +57,15 @@ class CommunityControllerTest {
     @Autowired
     private CommunityPostImageRepository communityPostImageRepository;
 
+    @Autowired
+    private CommunitySearchHistoryRepository communitySearchHistoryRepository;
+
     @BeforeEach
     void setUp() {
         communityCommentRepository.deleteAll();
         communityPostLikeRepository.deleteAll();
         communityPostImageRepository.deleteAll();
+        communitySearchHistoryRepository.deleteAll();
         communityPostRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -516,6 +521,101 @@ class CommunityControllerTest {
                 .andExpect(jsonPath("$.data.items.length()").value(1))
                 .andExpect(jsonPath("$.data.items[0].title").value("좋아요 글 1"))
                 .andExpect(jsonPath("$.data.hasNext").value(false));
+    }
+
+    @Test
+    void searchHistory_save_list_delete_success() throws Exception {
+        User user = saveUser("search-user@example.com", "searchUser");
+        communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(user)
+                        .category(CommunityCategory.TREE_SHADE)
+                        .title("검색 대상")
+                        .content("검색용 본문")
+                        .build()
+        );
+
+        mockMvc.perform(get("/api/v1/community/posts")
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .param("keyword", "나무"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/community/posts")
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .param("keyword", "볕"))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/api/v1/community/posts")
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .param("keyword", "나무"))
+                .andExpect(status().isOk());
+
+        MvcResult firstPageResult = mockMvc.perform(get("/api/v1/community/search-histories")
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .param("size", "1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].keyword").value("나무"))
+                .andExpect(jsonPath("$.data.hasNext").value(true))
+                .andExpect(jsonPath("$.data.nextCursor").isNotEmpty())
+                .andReturn();
+        printPrettyResponse(firstPageResult);
+
+        JsonNode firstPageJson = objectMapper.readTree(firstPageResult.getResponse().getContentAsString());
+        long historyId = firstPageJson.path("data").path("items").get(0).path("id").asLong();
+        String nextCursor = firstPageJson.path("data").path("nextCursor").asText();
+
+        mockMvc.perform(get("/api/v1/community/search-histories")
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .param("size", "1")
+                        .param("cursor", nextCursor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1))
+                .andExpect(jsonPath("$.data.items[0].keyword").value("볕"))
+                .andExpect(jsonPath("$.data.hasNext").value(false));
+
+        mockMvc.perform(delete("/api/v1/community/search-histories/{historyId}", historyId)
+                        .with(authentication(new JwtAuthentication(user.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("success"));
+
+        mockMvc.perform(get("/api/v1/community/search-histories")
+                        .with(authentication(new JwtAuthentication(user.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(1));
+
+        mockMvc.perform(delete("/api/v1/community/search-histories")
+                        .with(authentication(new JwtAuthentication(user.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data").value(1));
+
+        mockMvc.perform(get("/api/v1/community/search-histories")
+                        .with(authentication(new JwtAuthentication(user.getId()))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items.length()").value(0));
+    }
+
+    @Test
+    void searchHistory_deleteByOtherUser_forbidden() throws Exception {
+        User user = saveUser("search-owner@example.com", "searchOwner");
+        User other = saveUser("search-other@example.com", "searchOther");
+
+        mockMvc.perform(get("/api/v1/community/posts")
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .param("keyword", "삭제권한"))
+                .andExpect(status().isOk());
+
+        MvcResult listResult = mockMvc.perform(get("/api/v1/community/search-histories")
+                        .with(authentication(new JwtAuthentication(user.getId()))))
+                .andExpect(status().isOk())
+                .andReturn();
+        long historyId = objectMapper.readTree(listResult.getResponse().getContentAsString())
+                .path("data").path("items").get(0).path("id").asLong();
+
+        mockMvc.perform(delete("/api/v1/community/search-histories/{historyId}", historyId)
+                        .with(authentication(new JwtAuthentication(other.getId()))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value(5008));
     }
 
     private User saveUser(String email, String nickname) {

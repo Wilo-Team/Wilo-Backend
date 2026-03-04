@@ -1,6 +1,8 @@
-package com.wilo.server.community.dto;
+package com.wilo.server.community.dto.post;
 
-import com.wilo.server.community.entity.CommunityCategory;
+import com.wilo.server.community.dto.comment.CommunityCommentDto;
+import com.wilo.server.community.dto.comment.CommunityPostAuthorDto;
+import com.wilo.server.community.entity.post.CommunityCategory;
 import java.time.LocalDateTime;
 import java.util.List;
 

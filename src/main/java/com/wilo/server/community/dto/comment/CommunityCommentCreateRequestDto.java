@@ -1,4 +1,4 @@
-package com.wilo.server.community.dto;
+package com.wilo.server.community.dto.comment;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

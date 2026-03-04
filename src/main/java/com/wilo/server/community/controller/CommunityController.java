@@ -1,17 +1,19 @@
 package com.wilo.server.community.controller;
 
 import com.wilo.server.auth.error.AuthErrorCase;
-import com.wilo.server.community.dto.CommunityCommentCreateRequestDto;
-import com.wilo.server.community.dto.CommunityCommentDto;
-import com.wilo.server.community.dto.CommunityLikeResponseDto;
-import com.wilo.server.community.dto.CommunityPostCreateRequestDto;
-import com.wilo.server.community.dto.CommunityPostDetailResponseDto;
-import com.wilo.server.community.dto.CommunityPostListResponseDto;
-import com.wilo.server.community.dto.CommunityPostUpdateRequestDto;
-import com.wilo.server.community.dto.CommunityUserCommentListResponseDto;
-import com.wilo.server.community.entity.CommunityCategory;
-import com.wilo.server.community.entity.CommunityPostSortType;
-import com.wilo.server.community.service.CommunityService;
+import com.wilo.server.community.dto.comment.CommunityCommentCreateRequestDto;
+import com.wilo.server.community.dto.comment.CommunityCommentDto;
+import com.wilo.server.community.dto.post.CommunityLikeResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostCreateRequestDto;
+import com.wilo.server.community.dto.post.CommunityPostDetailResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostListResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.search.CommunitySearchHistoryListResponseDto;
+import com.wilo.server.community.dto.comment.CommunityUserCommentListResponseDto;
+import com.wilo.server.community.entity.post.CommunityCategory;
+import com.wilo.server.community.entity.post.CommunityPostSortType;
+import com.wilo.server.community.service.community.CommunityService;
+import com.wilo.server.community.service.search.CommunitySearchService;
 import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -42,6 +44,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CommunityController {
 
     private final CommunityService communityService;
+    private final CommunitySearchService communitySearchService;
 
     @PostMapping("/posts")
     @Operation(summary = "게시글 작성", description = "카테고리/제목/내용/이미지 URL로 게시글을 생성합니다.")
@@ -151,7 +154,8 @@ public class CommunityController {
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") Integer size
         ) {
-        return CommonResponse.success(communityService.getPosts(category, sort, keyword, cursor, size));
+        Long userId = extractUserIdIfPresent();
+        return CommonResponse.success(communitySearchService.getPosts(userId, category, sort, keyword, cursor, size));
     }
 
     @GetMapping("/users/{userId}/posts")
@@ -224,6 +228,66 @@ public class CommunityController {
             @RequestParam(defaultValue = "20") Integer size
     ) {
         return CommonResponse.success(communityService.getLikedPostsByUser(userId, cursor, size));
+    }
+
+    @GetMapping("/search-histories")
+    @Operation(
+            summary = "내 검색 기록 조회",
+            description = "로그인 유저의 텍스트 검색 기록을 최신순(lastSearchedAt desc, id desc)으로 커서 페이지네이션 조회합니다."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "조회 성공"),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            )
+    })
+    public CommonResponse<CommunitySearchHistoryListResponseDto> getSearchHistories(
+            @Parameter(description = "커서 값. 포맷: lastSearchedAt|id")
+            @RequestParam(required = false) String cursor,
+            @Parameter(description = "페이지 크기. 기본값 20, 최대 50")
+            @RequestParam(defaultValue = "20") Integer size
+    ) {
+        Long userId = extractUserId();
+        return CommonResponse.success(communitySearchService.getSearchHistories(userId, cursor, size));
+    }
+
+    @DeleteMapping("/search-histories/{historyId}")
+    @Operation(summary = "검색 기록 단건 삭제", description = "내 검색 기록 1건을 삭제합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "삭제 성공"),
+            @ApiResponse(
+                    responseCode = "403",
+                    description = "타인 기록 삭제 시도",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":5008,\"message\":\"본인의 검색 기록만 삭제할 수 있습니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "404",
+                    description = "검색 기록 없음",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":5007,\"message\":\"검색 기록을 찾을 수 없습니다.\"}")
+                    )
+            )
+    })
+    public CommonResponse<String> deleteSearchHistory(@PathVariable Long historyId) {
+        Long userId = extractUserId();
+        communitySearchService.deleteSearchHistory(userId, historyId);
+        return CommonResponse.success("검색 기록이 삭제되었습니다.");
+    }
+
+    @DeleteMapping("/search-histories")
+    @Operation(summary = "검색 기록 전체 삭제", description = "내 검색 기록 전체를 삭제하고 삭제 건수를 반환합니다.")
+    public CommonResponse<Integer> deleteAllSearchHistories() {
+        Long userId = extractUserId();
+        return CommonResponse.success(communitySearchService.deleteAllSearchHistories(userId));
     }
 
     @GetMapping("/posts/{postId}")
@@ -317,5 +381,24 @@ public class CommunityController {
         }
 
         throw ApplicationException.from(AuthErrorCase.UNAUTHORIZED);
+    }
+
+    private Long extractUserIdIfPresent() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication() != null
+                ? SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+                : null;
+
+        if (principal instanceof Long userId) {
+            return userId;
+        }
+
+        if (principal instanceof String userIdText) {
+            try {
+                return Long.parseLong(userIdText);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+
+        return null;
     }
 }

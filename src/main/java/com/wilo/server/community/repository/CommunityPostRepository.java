@@ -1,6 +1,6 @@
 package com.wilo.server.community.repository;
 
-import com.wilo.server.community.entity.CommunityPost;
+import com.wilo.server.community.entity.post.CommunityPost;
 import com.wilo.server.community.repository.query.CommunityPostQueryRepository;
 import org.springframework.data.jpa.repository.JpaRepository;
 
