@@ -92,6 +92,26 @@ public class AuthController {
         return CommonResponse.success("인증번호가 발송되었습니다.");
     }
 
+    @PostMapping("/phone-verification/resend")
+    @Operation(
+            summary = "휴대폰 인증번호 재발송",
+            description = """
+                    전화번호로 인증번호를 재발송합니다.
+                    기존 인증번호가 유효기간 내에 남아있어도 즉시 무효화하고, 새로운 6자리 인증번호를 발급해 발송합니다.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증번호 재발송 성공"),
+            @ApiResponse(responseCode = "400", description = "전화번호 형식 오류", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 Solapi 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> resendPhoneVerificationCode(
+            @Valid @RequestBody PhoneVerificationSendRequestDto request
+    ) {
+        authService.resendPhoneVerificationCode(request);
+        return CommonResponse.success("인증번호가 재발송되었습니다.");
+    }
+
     @PostMapping("/phone-verification/confirm")
     @Operation(
             summary = "휴대폰 인증번호 검증",

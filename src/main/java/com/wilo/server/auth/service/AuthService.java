@@ -106,6 +106,17 @@ public class AuthService {
     @Transactional
     public void sendPhoneVerificationCode(PhoneVerificationSendRequestDto request) {
         String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+        issuePhoneVerificationCode(normalizedPhoneNumber);
+    }
+
+    @Transactional
+    public void resendPhoneVerificationCode(PhoneVerificationSendRequestDto request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+        phoneVerificationCodeRepository.deleteByPhoneNumber(normalizedPhoneNumber);
+        issuePhoneVerificationCode(normalizedPhoneNumber);
+    }
+
+    private void issuePhoneVerificationCode(String normalizedPhoneNumber) {
         String verificationCode = createVerificationCode();
 
         solapiSmsService.sendVerificationCode(normalizedPhoneNumber, verificationCode);
