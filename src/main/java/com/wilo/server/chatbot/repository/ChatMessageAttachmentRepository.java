@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface ChatMessageAttachmentRepository extends JpaRepository<ChatMessageAttachment, Long> {
     List<ChatMessageAttachment> findAllByMessageId(Long messageId);
+    void deleteAllByMessageId(Long messageId);
 }

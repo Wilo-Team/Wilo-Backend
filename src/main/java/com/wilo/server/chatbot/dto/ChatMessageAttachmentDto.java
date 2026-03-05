@@ -8,5 +8,6 @@ import lombok.Getter;
 public class ChatMessageAttachmentDto {
     private Long mediaId;
     private String url;
+    private String thumbnailUrl;
     private String mediaType;
 }
