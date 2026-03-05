@@ -83,7 +83,7 @@ public class AuthController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "인증번호 발송 성공"),
             @ApiResponse(responseCode = "400", description = "전화번호 형식 오류", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 Solapi 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 NCP SENS 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<String> sendPhoneVerificationCode(
             @Valid @RequestBody PhoneVerificationSendRequestDto request
@@ -103,7 +103,7 @@ public class AuthController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "인증번호 재발송 성공"),
             @ApiResponse(responseCode = "400", description = "전화번호 형식 오류", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 Solapi 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 NCP SENS 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<String> resendPhoneVerificationCode(
             @Valid @RequestBody PhoneVerificationSendRequestDto request

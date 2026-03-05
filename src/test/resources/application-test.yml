@@ -59,7 +59,8 @@ cloud:
       access-key: test
       secret-key: test
 
-solapi:
+ncp:
   access-key: test
   secret-key: test
   sender-phone: 01012345678
+  service-id: ncp:sms:kr:test:test

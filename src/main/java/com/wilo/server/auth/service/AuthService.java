@@ -28,7 +28,7 @@ public class AuthService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PhoneVerificationCodeRepository phoneVerificationCodeRepository;
-    private final SolapiSmsService solapiSmsService;
+    private final NcpSensSmsService ncpSensSmsService;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -120,7 +120,7 @@ public class AuthService {
     private void issuePhoneVerificationCode(String normalizedPhoneNumber) {
         String verificationCode = createVerificationCode();
 
-        solapiSmsService.sendVerificationCode(normalizedPhoneNumber, verificationCode);
+        ncpSensSmsService.sendVerificationCode(normalizedPhoneNumber, verificationCode);
         phoneVerificationCodeRepository.save(normalizedPhoneNumber, verificationCode);
     }
 

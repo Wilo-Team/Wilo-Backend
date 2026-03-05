@@ -72,6 +72,9 @@ dependencies {
 
 	// solapi(전화번호 인증)
 	implementation 'com.solapi:sdk:1.0.3'
+
+	// httpclient(네이버 클라우드 플랫폼 전화번호 인증)
+	implementation 'org.apache.httpcomponents:httpclient:4.5.14'
 }
 
 sentry {
