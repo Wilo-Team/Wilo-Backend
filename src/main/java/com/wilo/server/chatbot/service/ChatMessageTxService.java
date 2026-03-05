@@ -139,7 +139,7 @@ public class ChatMessageTxService {
         }
 
         String code = session.getChatbotType().getCode();
-        return ChatbotPersona.from(code).name(); // "EUNHAENG"|"BUDDLE"|"NEUTY"
+        return ChatbotPersona.from(code).name();
     }
 
     @Transactional(readOnly = true)
@@ -183,7 +183,7 @@ public class ChatMessageTxService {
                     return ChatMessageAttachmentDto.builder()
                             .mediaId(media.getId())
                             .url(media.getUrl())
-                            .thumbnailUrl(media.getThumbnailUrl()) // 없으면 null OK
+                            .thumbnailUrl(media.getThumbnailUrl())
                             .mediaType(media.getMediaType().name())
                             .build();
                 })
