@@ -1,7 +1,9 @@
 package com.wilo.server.user.entity;
 
 import com.wilo.server.global.entity.BaseEntity;
+import com.wilo.server.user.service.CryptoConverter;
 import jakarta.persistence.Column;
+import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -29,6 +31,7 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 100)
     private String email;
 
+    @Convert(converter = CryptoConverter.class)
     @Column(nullable = false, length = 255)
     private String password;
 
@@ -41,21 +44,42 @@ public class User extends BaseEntity {
     @Column(length = 512)
     private String profileImageUrl;
 
+    @Column(length = 20)
+    private String phoneNumber;
+
+    @Column(nullable = false)
+    private boolean phoneVerified;
+
     @Builder
-    private User(String email, String password, String nickname, String description, String profileImageUrl) {
+    private User(String email, String password, String nickname, String description, String profileImageUrl, String phoneNumber, boolean phoneVerified) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
         this.description = description;
         this.profileImageUrl = profileImageUrl;
+        this.phoneNumber = phoneNumber;
+        this.phoneVerified = phoneVerified;
     }
 
-    public void updateProfile(String nickname, String description) {
+    public void updateProfile(String nickname, String description, String phoneNumber) {
         this.nickname = nickname;
         this.description = description;
+        if ((this.phoneNumber == null && phoneNumber != null)
+                || (this.phoneNumber != null && !this.phoneNumber.equals(phoneNumber))) {
+            this.phoneVerified = false;
+        }
+        this.phoneNumber = phoneNumber;
     }
 
     public void updateProfileImageUrl(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
+    }
+
+    public void markPhoneVerified() {
+        this.phoneVerified = true;
+    }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
     }
 }

@@ -26,6 +26,9 @@ spring:
     console:
       enabled: false
 
+  crypto:
+    secretKey: ${CRYPTO_KEY:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
+
 ai:
   base-url: http://localhost:8000
 
@@ -49,3 +52,9 @@ cloud:
     credentials:
       access-key: ${CLOUD_AWS_CREDENTIALS_ACCESS_KEY:dummy}
       secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY:dummy}
+
+ncp:
+  access-key: ${NCP_ACCESS_KEY:}
+  secret-key: ${NCP_SECRET_KEY:}
+  sender-phone: ${NCP_SENDER_PHONE:${NCP_SENDER:}}
+  service-id: ${NCP_SERVICE_ID:}

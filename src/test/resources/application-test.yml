@@ -30,6 +30,9 @@ spring:
     console:
       enabled: false
 
+  crypto:
+    secretKey: ${CRYPTO_KEY:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
+
 ai:
   base-url: http://localhost:8000
 
@@ -55,3 +58,9 @@ cloud:
     credentials:
       access-key: test
       secret-key: test
+
+ncp:
+  access-key: test
+  secret-key: test
+  sender-phone: 01012345678
+  service-id: ncp:sms:kr:test:test

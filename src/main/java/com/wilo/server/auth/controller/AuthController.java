@@ -1,6 +1,8 @@
 package com.wilo.server.auth.controller;
 
 import com.wilo.server.auth.dto.LoginRequestDto;
+import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
+import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
 import com.wilo.server.auth.dto.SignUpRequestDto;
 import com.wilo.server.auth.dto.TokenRequestDto;
 import com.wilo.server.auth.dto.TokenResponseDto;
@@ -68,5 +70,64 @@ public class AuthController {
     public CommonResponse<String> logout(@RequestBody(required = false) TokenRequestDto tokenRequestDto) {
         authService.logout(tokenRequestDto);
         return CommonResponse.success("로그아웃 되었습니다.");
+    }
+
+    @PostMapping("/phone-verification/send")
+    @Operation(
+            summary = "휴대폰 인증번호 발송",
+            description = """
+                    입력한 전화번호로 6자리 인증번호를 발송합니다.
+                    인증번호는 Redis에 3분 TTL로 저장됩니다.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증번호 발송 성공"),
+            @ApiResponse(responseCode = "400", description = "전화번호 형식 오류", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 NCP SENS 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> sendPhoneVerificationCode(
+            @Valid @RequestBody PhoneVerificationSendRequestDto request
+    ) {
+        authService.sendPhoneVerificationCode(request);
+        return CommonResponse.success("인증번호가 발송되었습니다.");
+    }
+
+    @PostMapping("/phone-verification/resend")
+    @Operation(
+            summary = "휴대폰 인증번호 재발송",
+            description = """
+                    전화번호로 인증번호를 재발송합니다.
+                    기존 인증번호가 유효기간 내에 남아있어도 즉시 무효화하고, 새로운 6자리 인증번호를 발급해 발송합니다.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증번호 재발송 성공"),
+            @ApiResponse(responseCode = "400", description = "전화번호 형식 오류", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "500", description = "문자 발송 실패 또는 NCP SENS 설정 누락", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> resendPhoneVerificationCode(
+            @Valid @RequestBody PhoneVerificationSendRequestDto request
+    ) {
+        authService.resendPhoneVerificationCode(request);
+        return CommonResponse.success("인증번호가 재발송되었습니다.");
+    }
+
+    @PostMapping("/phone-verification/confirm")
+    @Operation(
+            summary = "휴대폰 인증번호 검증",
+            description = """
+                    전화번호와 인증번호를 검증합니다.
+                    Redis에 저장된 인증번호(3분 TTL)와 일치하면 인증 성공 처리되고 해당 코드는 즉시 삭제됩니다.
+                    """
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "인증번호 검증 성공"),
+            @ApiResponse(responseCode = "400", description = "요청 형식 오류 / 인증번호 만료 / 인증번호 불일치", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> confirmPhoneVerificationCode(
+            @Valid @RequestBody PhoneVerificationConfirmRequestDto request
+    ) {
+        authService.confirmPhoneVerificationCode(request);
+        return CommonResponse.success("전화번호 인증이 완료되었습니다.");
     }
 }
