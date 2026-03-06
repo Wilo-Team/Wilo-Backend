@@ -22,6 +22,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -174,20 +178,29 @@ public class ChatMessageTxService {
             }
         }
 
-        List<ChatMessageAttachmentDto> attachments = attachmentRepository.findAllByMessageId(m.getId())
-                .stream()
-                .map(att -> {
-                    Media media = mediaRepository.findById(att.getMediaId())
-                            .orElseThrow(() -> new ApplicationException(MediaErrorCase.MEDIA_NOT_FOUND));
+        List<ChatMessageAttachment> atts = attachmentRepository.findAllByMessageId(m.getId());
 
-                    return ChatMessageAttachmentDto.builder()
-                            .mediaId(media.getId())
-                            .url(media.getUrl())
-                            .thumbnailUrl(media.getThumbnailUrl())
-                            .mediaType(media.getMediaType().name())
-                            .build();
-                })
-                .toList();
+        List<ChatMessageAttachmentDto> attachments = List.of();
+        if (!atts.isEmpty()) {
+            List<Long> mediaIds = atts.stream().map(ChatMessageAttachment::getMediaId).toList();
+            Map<Long, Media> mediaMap = mediaRepository.findAllById(mediaIds)
+                    .stream()
+                    .collect(Collectors.toMap(Media::getId, Function.identity()));
+            attachments = atts.stream()
+                    .map(att -> {
+                        Media media = mediaMap.get(att.getMediaId());
+                        if (media == null) {
+                            throw new ApplicationException(MediaErrorCase.MEDIA_NOT_FOUND);
+                        }
+                        return ChatMessageAttachmentDto.builder()
+                                .mediaId(media.getId())
+                                .url(media.getUrl())
+                                .thumbnailUrl(media.getThumbnailUrl())
+                                .mediaType(media.getMediaType().name())
+                                .build();
+                    })
+                    .toList();
+        }
 
         return ChatMessageDto.builder()
                 .messageId(m.getId())
