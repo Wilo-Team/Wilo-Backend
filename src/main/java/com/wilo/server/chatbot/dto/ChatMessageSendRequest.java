@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import jakarta.validation.constraints.NotBlank;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
@@ -13,7 +13,8 @@ import jakarta.validation.constraints.NotBlank;
 public class ChatMessageSendRequest {
     private MessageType messageType;
 
-    @NotBlank(message = "message는 필수입니다.")
     @Size(max = 4000, message = "message는 4000자 이하입니다.")
     private String message;
+
+    List<Long> mediaIds;
 }

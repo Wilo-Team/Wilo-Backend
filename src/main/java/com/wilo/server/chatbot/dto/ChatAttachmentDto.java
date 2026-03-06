@@ -5,9 +5,8 @@ import lombok.Getter;
 
 @Getter
 @Builder
-public class ChatMessageAttachmentDto {
+public class ChatAttachmentDto {
     private Long mediaId;
     private String url;
-    private String thumbnailUrl;
     private String mediaType;
 }
