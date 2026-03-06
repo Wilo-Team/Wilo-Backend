@@ -71,9 +71,10 @@ public class ChatMessageTxService {
         List<Long> mediaIds = request.getMediaIds();
         if (mediaIds != null && !mediaIds.isEmpty()) {
 
-            // media 존재 검증
-            List<Media> medias = mediaRepository.findAllById(mediaIds);
-            if (medias.size() != mediaIds.size()) {
+            // media 존재 검증 (중복 검증 포함)
+            List<Long> distinctMediaIds = mediaIds.stream().distinct().toList();
+            List<Media> medias = mediaRepository.findAllById(distinctMediaIds);
+            if (medias.size() != distinctMediaIds.size()){
                 throw new ApplicationException(MediaErrorCase.MEDIA_NOT_FOUND);
             }
 
