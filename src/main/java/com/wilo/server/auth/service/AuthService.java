@@ -56,7 +56,9 @@ public class AuthService {
 
     @Transactional
     public TokenResponseDto loginAndIssueToken(LoginRequestDto request) {
-        User user = userRepository.findByEmail(request.email())
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+
+        User user = userRepository.findByPhoneNumber(normalizedPhoneNumber)
                 .orElseThrow(() -> ApplicationException.from(AuthErrorCase.INVALID_CREDENTIALS));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {

@@ -53,7 +53,7 @@ class AuthControllerTest {
                 }
                 """;
 
-                mockMvc.perform(post("/api/v1/auth/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isOk())
@@ -76,7 +76,7 @@ class AuthControllerTest {
                 }
                 """;
 
-                mockMvc.perform(post("/api/v1/auth/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict())
@@ -91,11 +91,12 @@ class AuthControllerTest {
                 .nickname("loginUser")
                 .description("bio")
                 .profileImageUrl("https://example.com/profile.png")
+                .phoneNumber("01012345679")
                 .build());
 
         String request = """
                 {
-                  "email": "login@example.com",
+                  "phoneNumber": "010-1234-5679",
                   "password": "password1234"
                 }
                 """;
