@@ -30,11 +30,11 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/signup")
-    @Operation(summary = "회원가입", description = "이메일/비밀번호/닉네임으로 회원가입하고 JWT 토큰을 발급합니다.")
+    @Operation(summary = "회원가입", description = "전화번호/비밀번호로 회원가입하고 JWT 토큰을 발급합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "회원가입 성공"),
             @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "409", description = "이메일 또는 닉네임 중복", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(responseCode = "409", description = "전화번호 중복", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<String> signUp(@Valid @RequestBody SignUpRequestDto request) {
         authService.signUpAndIssueToken(request);

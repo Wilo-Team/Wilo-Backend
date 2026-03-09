@@ -16,7 +16,8 @@ public enum AuthErrorCase implements ErrorCase {
     SMS_CONFIGURATION_MISSING(500, 1006, "문자 발송 설정이 누락되었습니다."),
     SMS_SEND_FAILED(500, 1007, "인증 문자 발송에 실패했습니다."),
     PHONE_VERIFICATION_CODE_EXPIRED(400, 1008, "인증번호가 만료되었거나 존재하지 않습니다."),
-    PHONE_VERIFICATION_CODE_MISMATCH(400, 1009, "인증번호가 일치하지 않습니다.");
+    PHONE_VERIFICATION_CODE_MISMATCH(400, 1009, "인증번호가 일치하지 않습니다."),
+    PHONE_ALREADY_EXISTS(409, 1010, "이미 사용 중인 전화번호입니다.");
 
     private final Integer httpStatusCode;
     private final Integer errorCode;
