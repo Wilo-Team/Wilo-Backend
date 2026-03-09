@@ -35,15 +35,20 @@ public class UserService {
     public UserResponseDto updateUserProfile(Long userId, UserUpdateRequestDto request) {
         User user = getUserOrThrow(userId);
 
-        if (!user.getNickname().equals(request.nickname()) && userRepository.existsByNickname(request.nickname())) {
+        if (request.nickname() == null && request.description() == null) {
+            throw ApplicationException.from(UserErrorCase.INVALID_PROFILE_UPDATE_REQUEST);
+        }
+
+        if (request.nickname() != null
+                && !user.getNickname().equals(request.nickname())
+                && userRepository.existsByNickname(request.nickname())) {
             throw ApplicationException.from(UserErrorCase.NICKNAME_ALREADY_EXISTS);
         }
 
-        String normalizedPhoneNumber = request.phoneNumber() == null
-                ? null
-                : request.phoneNumber().replaceAll("\\D", "");
+        String nicknameToUpdate = request.nickname() == null ? user.getNickname() : request.nickname();
+        String descriptionToUpdate = request.description() == null ? user.getDescription() : request.description();
 
-        user.updateProfile(request.nickname(), request.description(), normalizedPhoneNumber);
+        user.updateProfile(nicknameToUpdate, descriptionToUpdate, user.getPhoneNumber());
         return UserResponseDto.from(user);
     }
 

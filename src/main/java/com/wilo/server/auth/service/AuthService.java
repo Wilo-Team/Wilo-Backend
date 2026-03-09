@@ -34,23 +34,20 @@ public class AuthService {
 
     @Transactional
     public TokenResponseDto signUpAndIssueToken(SignUpRequestDto request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
 
-        if (userRepository.existsByEmail(request.email())) {
-            throw ApplicationException.from(AuthErrorCase.EMAIL_ALREADY_EXISTS);
-        }
-
-        if (userRepository.existsByNickname(request.nickname())) {
-            throw ApplicationException.from(AuthErrorCase.NICKNAME_ALREADY_EXISTS);
+        if (userRepository.existsByPhoneNumber(normalizedPhoneNumber)) {
+            throw ApplicationException.from(AuthErrorCase.PHONE_ALREADY_EXISTS);
         }
 
         User user = userRepository.save(
                 User.builder()
-                        .email(request.email())
+                        .email(buildEmailFromPhone(normalizedPhoneNumber))
                         .password(passwordEncoder.encode(request.password()))
-                        .nickname(request.nickname())
-                        .description(request.description())
-                        .profileImageUrl(request.profileImageUrl())
-                        .phoneNumber(request.phoneNumber() == null ? null : normalizePhoneNumber(request.phoneNumber()))
+                        .nickname(buildNicknameFromPhone(normalizedPhoneNumber))
+                        .description(null)
+                        .profileImageUrl(null)
+                        .phoneNumber(normalizedPhoneNumber)
                         .build()
         );
 
@@ -59,7 +56,9 @@ public class AuthService {
 
     @Transactional
     public TokenResponseDto loginAndIssueToken(LoginRequestDto request) {
-        User user = userRepository.findByEmail(request.email())
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+
+        User user = userRepository.findByPhoneNumber(normalizedPhoneNumber)
                 .orElseThrow(() -> ApplicationException.from(AuthErrorCase.INVALID_CREDENTIALS));
 
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
@@ -159,6 +158,14 @@ public class AuthService {
 
     private String normalizePhoneNumber(String phoneNumber) {
         return phoneNumber.replaceAll("\\D", "");
+    }
+
+    private String buildEmailFromPhone(String normalizedPhoneNumber) {
+        return "phone-" + normalizedPhoneNumber + "@wilo.local";
+    }
+
+    private String buildNicknameFromPhone(String normalizedPhoneNumber) {
+        return "user_" + normalizedPhoneNumber;
     }
 
     private String createVerificationCode() {

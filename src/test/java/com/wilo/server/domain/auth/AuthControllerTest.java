@@ -48,15 +48,12 @@ class AuthControllerTest {
     void signup_success() throws Exception {
         String request = """
                 {
-                  "email": "signup@example.com",
                   "password": "password1234",
-                  "nickname": "signupUser",
-                  "description": "hello",
-                  "profileImageUrl": "https://example.com/me.png"
+                  "phoneNumber": "010-1234-5678"
                 }
                 """;
 
-                mockMvc.perform(post("/api/v1/auth/signup")
+        mockMvc.perform(post("/api/v1/auth/signup")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isOk())
@@ -64,22 +61,18 @@ class AuthControllerTest {
     }
 
     @Test
-    void signup_duplicateEmail_conflict() throws Exception {
+    void signup_duplicatePhone_conflict() throws Exception {
         userRepository.save(User.builder()
-                .email("dupe@example.com")
+                .email("phone-01077778888@wilo.local")
                 .password(passwordEncoder.encode("password1234"))
-                .nickname("nickname1")
-                .description("bio")
-                .profileImageUrl("https://example.com/profile.png")
+                .nickname("user_01077778888")
+                .phoneNumber("01077778888")
                 .build());
 
         String request = """
                 {
-                  "email": "dupe@example.com",
                   "password": "password1234",
-                  "nickname": "nickname2",
-                  "description": "hello",
-                  "profileImageUrl": "https://example.com/me.png"
+                  "phoneNumber": "010-7777-8888"
                 }
                 """;
 
@@ -87,7 +80,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(request))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.errorCode").value(1001));
+                .andExpect(jsonPath("$.errorCode").value(1010));
     }
 
     @Test
@@ -98,11 +91,12 @@ class AuthControllerTest {
                 .nickname("loginUser")
                 .description("bio")
                 .profileImageUrl("https://example.com/profile.png")
+                .phoneNumber("01012345679")
                 .build());
 
         String request = """
                 {
-                  "email": "login@example.com",
+                  "phoneNumber": "010-1234-5679",
                   "password": "password1234"
                 }
                 """;
