@@ -58,7 +58,7 @@ public class UserController {
     }
 
     @PatchMapping
-    @Operation(summary = "내 프로필 수정", description = "현재 로그인한 유저의 닉네임/한 줄 소개/전화번호를 수정합니다.")
+    @Operation(summary = "내 프로필 수정", description = "현재 로그인한 유저의 닉네임/한 줄 소개를 수정합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "수정 성공"),
             @ApiResponse(
