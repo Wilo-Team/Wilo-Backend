@@ -5,6 +5,7 @@ import com.wilo.server.auth.error.AuthErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
@@ -69,12 +70,32 @@ public class NcpSensSmsService {
     }
 
     private void validateConfiguration() {
-        if (!StringUtils.hasText(ncpSmsProperties.getAccessKey())
-                || !StringUtils.hasText(ncpSmsProperties.getSecretKey())
-                || !StringUtils.hasText(ncpSmsProperties.getServiceId())
-                || !StringUtils.hasText(ncpSmsProperties.getSenderPhone())) {
+        boolean missingAccessKey = !StringUtils.hasText(ncpSmsProperties.getAccessKey());
+        boolean missingSecretKey = !StringUtils.hasText(ncpSmsProperties.getSecretKey());
+        boolean missingServiceId = !StringUtils.hasText(ncpSmsProperties.getServiceId());
+        boolean missingSenderPhone = !StringUtils.hasText(ncpSmsProperties.getSenderPhone());
+
+        if (missingAccessKey || missingSecretKey || missingServiceId || missingSenderPhone) {
+            List<String> missingFields = new ArrayList<>();
+            if (missingAccessKey) missingFields.add("ncp.access-key");
+            if (missingSecretKey) missingFields.add("ncp.secret-key");
+            if (missingServiceId) missingFields.add("ncp.service-id");
+            if (missingSenderPhone) missingFields.add("ncp.sender-phone");
+
+            log.error("NCP SENS config missing fields={}. bound(accessKey={}, secretKey={}, serviceId={}, senderPhone={}), env(NCP_ACCESS_KEY={}, NCP_SECRET_KEY={}, NCP_SERVICE_ID={}, NCP_SENDER={}, NCP_SENDER_PHONE={})",
+                    missingFields,
+                    !missingAccessKey, !missingSecretKey, !missingServiceId, !missingSenderPhone,
+                    hasTextEnv("NCP_ACCESS_KEY"),
+                    hasTextEnv("NCP_SECRET_KEY"),
+                    hasTextEnv("NCP_SERVICE_ID"),
+                    hasTextEnv("NCP_SENDER"),
+                    hasTextEnv("NCP_SENDER_PHONE"));
             throw ApplicationException.from(AuthErrorCase.SMS_CONFIGURATION_MISSING);
         }
+    }
+
+    private boolean hasTextEnv(String key) {
+        return StringUtils.hasText(System.getenv(key));
     }
 
     private String createSignature(
