@@ -57,7 +57,7 @@ jobs:
       CRYPTO_KEY: ${{ secrets.CRYPTO_KEY }}
       NCP_ACCESS_KEY: ${{ secrets.NCP_ACCESS_KEY }}
       NCP_SECRET_KEY: ${{ secrets.NCP_SECRET_KEY }}
-      NCP_SENDER_PHONE: ${{ secrets.NCP_SENDER_PHONE }}
+      NCP_SENDER: ${{ secrets.NCP_SENDER }}
       NCP_SERVICE_ID: ${{ secrets.NCP_SERVICE_ID }}
 
     steps:
