@@ -54,7 +54,7 @@ cloud:
       secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY:dummy}
 
 ncp:
-  access-key: ${NCP_ACCESS_KEY:}
-  secret-key: ${NCP_SECRET_KEY:}
-  sender-phone: ${NCP_SENDER_PHONE:${NCP_SENDER:}}
-  service-id: ${NCP_SERVICE_ID:}
+  access-key: ${NCP_ACCESS_KEY}
+  secret-key: ${NCP_SECRET_KEY}
+  sender-phone: ${NCP_SENDER}
+  service-id: ${NCP_SERVICE_ID}
