@@ -64,11 +64,6 @@ jobs:
       # .env 파일 생성 (DEVELOPMENT)
       - name: Create .env file
         run: |
-          NCP_SENDER_VALUE="${{ secrets.NCP_SENDER }}"
-          if [ -z "$NCP_SENDER_VALUE" ]; then
-            NCP_SENDER_VALUE="${{ secrets.NCP_SENDER_PHONE }}"
-          fi
-
           cat > .env.dev << EOF
           DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
           MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
@@ -84,20 +79,9 @@ jobs:
           CRYPTO_KEY=${{ secrets.CRYPTO_KEY }}
           NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }}
           NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }}
-          NCP_SENDER=${NCP_SENDER_VALUE}
+          NCP_SENDER=${{ secrets.NCP_SENDER }}
           NCP_SERVICE_ID=${{ secrets.NCP_SERVICE_ID }}
           EOF
-        shell: bash
-
-      - name: Validate NCP env
-        run: |
-          for key in NCP_ACCESS_KEY NCP_SECRET_KEY NCP_SENDER NCP_SERVICE_ID; do
-            if ! grep -q "^${key}=.\\+" .env.dev; then
-              echo "ERROR: Missing required ${key} in .env.dev"
-              exit 1
-            fi
-          done
-          echo "NCP env validation passed."
         shell: bash
 
       # Docker Compose로 배포 (DEVELOPMENT)
