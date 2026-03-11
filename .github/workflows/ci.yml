@@ -54,7 +54,7 @@ jobs:
       CLOUD_AWS_CREDENTIALS_SECRET_KEY: dummy
       CLOUD_AWS_REGION: ap-northeast-2
 
-      CRYPTO_SECRET_KEY: ${{ secrets.CRYPTO_SECRET_KEY }}
+      SPRING_CRYPTO_SECRET_KEY: ${{ secrets.CRYPTO_SECRET_KEY }}
       NCP_ACCESS_KEY: ${{ secrets.NCP_ACCESS_KEY }}
       NCP_SECRET_KEY: ${{ secrets.NCP_SECRET_KEY }}
       NCP_SENDER_PHONE: ${{ secrets.NCP_SENDER_PHONE }}

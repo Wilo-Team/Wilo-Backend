@@ -16,13 +16,6 @@ public class CryptoService {
     @Value("${spring.crypto.secretKey}")
     private String secretKey;
 
-    @PostConstruct
-    void validateSecretKey() {
-        if (!StringUtils.hasText(secretKey)) {
-            throw new IllegalStateException("CRYPTO_KEY (spring.crypto.secretKey) is missing.");
-        }
-    }
-
     // ✅ 암호화
     public String encrypt(String plainText) throws Exception {
         byte[] decodedKey = Base64.getDecoder().decode(secretKey);
