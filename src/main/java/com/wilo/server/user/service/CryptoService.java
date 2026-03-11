@@ -13,7 +13,7 @@ public class CryptoService {
 
     private static final String ALGORITHM = "AES";
 
-    @Value("${spring.crypto.secretKey}")
+    @Value("${spring.crypto.secret-key}")
     private String secretKey;
 
     // ✅ 암호화
