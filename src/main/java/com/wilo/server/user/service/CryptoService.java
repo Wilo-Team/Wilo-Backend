@@ -1,8 +1,10 @@
 package com.wilo.server.user.service;
 
+import jakarta.annotation.PostConstruct;
 import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -13,6 +15,13 @@ public class CryptoService {
 
     @Value("${spring.crypto.secretKey}")
     private String secretKey;
+
+    @PostConstruct
+    void validateSecretKey() {
+        if (!StringUtils.hasText(secretKey)) {
+            throw new IllegalStateException("CRYPTO_KEY (spring.crypto.secretKey) is missing.");
+        }
+    }
 
     // ✅ 암호화
     public String encrypt(String plainText) throws Exception {
