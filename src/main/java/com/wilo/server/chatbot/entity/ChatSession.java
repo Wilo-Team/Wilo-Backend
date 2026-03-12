@@ -39,6 +39,14 @@ public class ChatSession {
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
 
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private LocalDateTime createdAt;
+
+    @PrePersist
+    public void prePersist() {
+        this.createdAt = LocalDateTime.now();
+    }
+
     public static ChatSession createForUser(Long userId, ChatbotType chatbotType) {
         ChatSession session = new ChatSession();
         session.userId = userId;
