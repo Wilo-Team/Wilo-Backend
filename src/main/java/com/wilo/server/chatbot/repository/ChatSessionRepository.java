@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> {
+
     @Query("""
         select cs
         from ChatSession cs
@@ -26,18 +27,22 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
             )
           and cs.status = :status
           and (
-                :cursorLastMessageAt is null
-                or cs.lastMessageAt < :cursorLastMessageAt
-                or (cs.lastMessageAt = :cursorLastMessageAt and cs.id < :cursorId)
-                or (cs.lastMessageAt is null and :cursorLastMessageAt is null and cs.id < :cursorId)
+                :cursorActivityAt is null
+                or (
+                    coalesce(cs.lastMessageAt, cs.createdAt) < :cursorActivityAt
+                    or (
+                        coalesce(cs.lastMessageAt, cs.createdAt) = :cursorActivityAt
+                        and cs.id < :cursorId
+                    )
+                )
           )
-        order by cs.lastMessageAt desc nulls last, cs.id desc
+        order by coalesce(cs.lastMessageAt, cs.createdAt) desc, cs.id desc
     """)
     List<ChatSession> findSessions(
             @Param("userId") Long userId,
             @Param("guestId") String guestId,
             @Param("status") ChatSessionStatus status,
-            @Param("cursorLastMessageAt") LocalDateTime cursorLastMessageAt,
+            @Param("cursorActivityAt") LocalDateTime cursorActivityAt,
             @Param("cursorId") Long cursorId,
             Pageable pageable
     );
