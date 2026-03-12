@@ -9,7 +9,12 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "chat_sessions")
+@Table(
+        name = "chat_sessions",
+        indexes = {
+                @Index(name = "idx_chat_sessions_created_at", columnList = "created_at")
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class ChatSession {
 
@@ -17,11 +22,9 @@ public class ChatSession {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 로그인 사용자면 user_id 세팅
     @Column(name = "user_id")
     private Long userId;
 
-    // 게스트면 guest_id 세팅
     @Column(name = "guest_id", length = 100)
     private String guestId;
 
@@ -44,7 +47,9 @@ public class ChatSession {
 
     @PrePersist
     public void prePersist() {
-        this.createdAt = LocalDateTime.now();
+        if (this.createdAt == null) {
+            this.createdAt = LocalDateTime.now();
+        }
     }
 
     public static ChatSession createForUser(Long userId, ChatbotType chatbotType) {
