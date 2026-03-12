@@ -12,5 +12,6 @@ public class ChatSessionListItem {
     private ChatbotTypeDto chatbotType;
     private String status;
     private LocalDateTime lastMessageAt;
+    private LocalDateTime activityAt;
     private String preview;
 }

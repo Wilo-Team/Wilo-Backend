@@ -255,6 +255,9 @@ public class ChatSessionService {
     private ChatSessionListItem toItem(ChatSession session) {
         String preview = session.getTitle();
 
+        LocalDateTime activityAt =
+                session.getLastMessageAt() != null ? session.getLastMessageAt() : session.getCreatedAt();
+
         return ChatSessionListItem.builder()
                 .sessionId(session.getId())
                 .title(session.getTitle())
@@ -264,6 +267,7 @@ public class ChatSessionService {
                         .build())
                 .status(session.getStatus().name())
                 .lastMessageAt(session.getLastMessageAt())
+                .activityAt(activityAt)
                 .preview(preview)
                 .build();
     }
