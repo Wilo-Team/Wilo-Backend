@@ -1,5 +1,6 @@
 package com.wilo.server.chatbot.entity;
 
+import com.wilo.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -16,7 +17,7 @@ import java.time.LocalDateTime;
         }
 )
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ChatSession {
+public class ChatSession extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,16 +42,6 @@ public class ChatSession {
 
     @Column(name = "last_message_at")
     private LocalDateTime lastMessageAt;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @PrePersist
-    public void prePersist() {
-        if (this.createdAt == null) {
-            this.createdAt = LocalDateTime.now();
-        }
-    }
 
     public static ChatSession createForUser(Long userId, ChatbotType chatbotType) {
         ChatSession session = new ChatSession();
