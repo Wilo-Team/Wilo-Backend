@@ -244,7 +244,7 @@ public class ChatSessionService {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
 
-        session.restore();
+        session.unarchive();
 
         return ChatSessionRestoreResponse.builder()
                 .sessionId(session.getId())

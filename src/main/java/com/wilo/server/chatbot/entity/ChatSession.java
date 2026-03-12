@@ -77,7 +77,7 @@ public class ChatSession extends BaseEntity {
         this.status = ChatSessionStatus.ARCHIVED;
     }
 
-    public void restore() {
+    public void unarchive() {
         this.status = ChatSessionStatus.ACTIVE;
     }
 }
