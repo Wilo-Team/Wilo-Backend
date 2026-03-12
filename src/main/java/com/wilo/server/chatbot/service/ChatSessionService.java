@@ -82,14 +82,15 @@ public class ChatSessionService {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
 
-        LocalDateTime cursorLastMessageAt = request.cursorLastMessageAt();
+        LocalDateTime cursorActivityAt = request.cursorActivityAt();
         Long cursorId = request.cursorId();
 
         if (cursorId != null && cursorId <= 0) {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
 
-        if ((cursorLastMessageAt == null) != (cursorId == null)) {
+        // cursor는 둘 다 있거나 둘 다 없어야 함
+        if ((cursorActivityAt == null) != (cursorId == null)) {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
 
@@ -99,12 +100,13 @@ public class ChatSessionService {
                 userId,
                 guestId,
                 status,
-                cursorLastMessageAt,
+                cursorActivityAt,
                 cursorId,
                 pageable
         );
 
         boolean hasNext = sessions.size() > size;
+
         if (hasNext) {
             sessions = sessions.subList(0, size);
         }
@@ -113,18 +115,21 @@ public class ChatSessionService {
                 .map(this::toItem)
                 .toList();
 
-        LocalDateTime nextCursorLastMessageAt = null;
+        LocalDateTime nextCursorActivityAt = null;
         Long nextCursorId = null;
 
         if (hasNext && !sessions.isEmpty()) {
             ChatSession last = sessions.get(sessions.size() - 1);
-            nextCursorLastMessageAt = last.getLastMessageAt();
+
+            LocalDateTime activityAt = last.getLastMessageAt() != null ? last.getLastMessageAt() : last.getCreatedAt();
+
+            nextCursorActivityAt = activityAt;
             nextCursorId = last.getId();
         }
 
         return ChatSessionListResponse.builder()
                 .sessions(items)
-                .nextCursorLastMessageAt(nextCursorLastMessageAt)
+                .nextCursorActivityAt(nextCursorActivityAt)
                 .nextCursorId(nextCursorId)
                 .hasNext(hasNext)
                 .build();
@@ -239,7 +244,7 @@ public class ChatSessionService {
             throw new ApplicationException(ChatbotErrorCase.INVALID_PARAMETER);
         }
 
-        session.restore();
+        session.unarchive();
 
         return ChatSessionRestoreResponse.builder()
                 .sessionId(session.getId())
@@ -250,6 +255,9 @@ public class ChatSessionService {
     private ChatSessionListItem toItem(ChatSession session) {
         String preview = session.getTitle();
 
+        LocalDateTime activityAt =
+                session.getLastMessageAt() != null ? session.getLastMessageAt() : session.getCreatedAt();
+
         return ChatSessionListItem.builder()
                 .sessionId(session.getId())
                 .title(session.getTitle())
@@ -259,6 +267,7 @@ public class ChatSessionService {
                         .build())
                 .status(session.getStatus().name())
                 .lastMessageAt(session.getLastMessageAt())
+                .activityAt(activityAt)
                 .preview(preview)
                 .build();
     }

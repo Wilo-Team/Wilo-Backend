@@ -54,26 +54,30 @@ public class ChatSessionController {
     @Operation(
             summary = "대화 보관함(세션 목록) 조회",
             description = """
-                    대화 세션 목록을 커서 기반으로 조회합니다.
-                    
-                    정렬 기준:
-                    - lastMessageAt DESC
-                    - id DESC
-                    
-                    페이징 방식:
-                    - 복합 커서(lastMessageAt + id) 기반 Keyset Pagination
-                    
-                    기본값:
-                    - status = ACTIVE
-                    - size = 20
-                    
-                    제한:
-                    - size 최대 50
-                    
-                    인증 정책:
-                    - 로그인 사용자 → userId 기반 조회
-                    - 비로그인 사용자 → X-Guest-Id 헤더 필요
-                    """
+                대화 세션 목록을 커서 기반으로 조회합니다.
+
+                정렬 기준:
+                - activityAt DESC
+                - id DESC
+
+                activityAt 정의:
+                - lastMessageAt 이 존재하면 lastMessageAt
+                - 없으면 createdAt
+
+                페이징 방식:
+                - 복합 커서(activityAt + id) 기반 Keyset Pagination
+
+                기본값:
+                - status = ACTIVE
+                - size = 20
+
+                제한:
+                - size 최대 50
+
+                인증 정책:
+                - 로그인 사용자 → userId 기반 조회
+                - 비로그인 사용자 → X-Guest-Id 헤더 필요
+                """
     )
     @ApiResponses(value = {
 
@@ -89,37 +93,57 @@ public class ChatSessionController {
                     content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<ChatSessionListResponse> getSessions(
-            @Parameter(description = "비로그인 사용자 식별자(UUID). 비로그인 요청 시 필수", example = "550e8400-e29b-41d4-a716-446655440000")
+
+            @Parameter(
+                    description = "비로그인 사용자 식별자(UUID). 비로그인 요청 시 필수",
+                    example = "550e8400-e29b-41d4-a716-446655440000"
+            )
             @RequestHeader(value = "X-Guest-Id", required = false)
             String guestId,
 
-            @Parameter(description = "기본 ACTIVE, 옵션: ACTIVE 또는 ARCHIVED", example = "ACTIVE")
+            @Parameter(
+                    description = "기본 ACTIVE, 옵션: ACTIVE 또는 ARCHIVED",
+                    example = "ACTIVE"
+            )
             @RequestParam(required = false)
             @Pattern(regexp = "ACTIVE|ARCHIVED", message = "유효하지 않은 상태값입니다.")
             String status,
 
-            @Parameter(description = "이전 페이지 마지막 세션의 lastMessageAt 값", example = "2026-02-19T10:40:00")
+            @Parameter(
+                    description = "이전 페이지 마지막 세션의 activityAt 값 (activityAt = lastMessageAt 없으면 createdAt)",
+                    example = "2026-02-19T10:40:00"
+            )
             @RequestParam(required = false)
-            LocalDateTime cursorLastMessageAt,
+            LocalDateTime cursorActivityAt,
 
-            @Parameter(description = "이전 페이지 마지막 세션의 sessionId 값", example = "101")
+            @Parameter(
+                    description = "이전 페이지 마지막 세션의 sessionId 값",
+                    example = "101"
+            )
             @RequestParam(required = false)
             Long cursorId,
 
-            @Parameter(description = "페이지 크기 (기본 20, 최대 50)", example = "20")
+            @Parameter(
+                    description = "페이지 크기 (기본 20, 최대 50)",
+                    example = "20"
+            )
             @RequestParam(required = false)
             @Min(value = 1, message = "size는 1 이상이어야 합니다.")
             @Max(value = 50, message = "size는 50 이하여야 합니다.")
             Integer size
     ) {
+
         ChatSessionListRequest request =
                 new ChatSessionListRequest(
                         status,
-                        cursorLastMessageAt,
+                        cursorActivityAt,
                         cursorId,
                         size
                 );
-        return CommonResponse.success(chatSessionService.getSessions(guestId, request));
+
+        return CommonResponse.success(
+                chatSessionService.getSessions(guestId, request)
+        );
     }
 
     @PatchMapping("/{sessionId}")

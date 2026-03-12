@@ -4,7 +4,7 @@ import java.time.LocalDateTime;
 
 public record ChatSessionListRequest(
         String status,
-        LocalDateTime cursorLastMessageAt,
+        LocalDateTime cursorActivityAt,
         Long cursorId,
         Integer size
 ) {}

@@ -1,5 +1,6 @@
 package com.wilo.server.chatbot.entity;
 
+import com.wilo.server.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,19 +10,22 @@ import java.time.LocalDateTime;
 
 @Getter
 @Entity
-@Table(name = "chat_sessions")
+@Table(
+        name = "chat_sessions",
+        indexes = {
+                @Index(name = "idx_chat_sessions_created_at", columnList = "created_at")
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ChatSession {
+public class ChatSession extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // 로그인 사용자면 user_id 세팅
     @Column(name = "user_id")
     private Long userId;
 
-    // 게스트면 guest_id 세팅
     @Column(name = "guest_id", length = 100)
     private String guestId;
 
@@ -73,7 +77,7 @@ public class ChatSession {
         this.status = ChatSessionStatus.ARCHIVED;
     }
 
-    public void restore() {
+    public void unarchive() {
         this.status = ChatSessionStatus.ACTIVE;
     }
 }
