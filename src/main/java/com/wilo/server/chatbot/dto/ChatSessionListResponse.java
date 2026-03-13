@@ -10,7 +10,7 @@ import java.util.List;
 @Builder
 public class ChatSessionListResponse {
     private List<ChatSessionListItem> sessions;
-    private LocalDateTime nextCursorLastMessageAt;
+    private LocalDateTime nextCursorActivityAt;
     private Long nextCursorId;
     private boolean hasNext;
 }

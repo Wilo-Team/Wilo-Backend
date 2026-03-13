@@ -27,7 +27,7 @@ spring:
       enabled: false
 
   crypto:
-    secretKey: ${CRYPTO_KEY:MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=}
+    secret-key: ${CRYPTO_SECRET_KEY}
 
 ai:
   base-url: http://localhost:8000
@@ -54,13 +54,13 @@ cloud:
       secret-key: ${CLOUD_AWS_CREDENTIALS_SECRET_KEY:dummy}
 
 ncp:
-  access-key: ${NCP_ACCESS_KEY:}
-  secret-key: ${NCP_SECRET_KEY:}
-  sender-phone: ${NCP_SENDER_PHONE:${NCP_SENDER:}}
-  service-id: ${NCP_SERVICE_ID:}
+  access-key: ${NCP_ACCESS_KEY}
+  secret-key: ${NCP_SECRET_KEY}
+  sender-phone: ${NCP_SENDER_PHONE}
+  service-id: ${NCP_SERVICE_ID}
 
 apple:
-  client-id: ${APPLE_CLIENT_ID:}
-  team-id: ${APPLE_TEAM_ID:}
-  key-id: ${APPLE_KEY_ID:}
-  private-key: ${APPLE_PRIVATE_KEY:}
+  client-id: ${APPLE_CLIENT_ID}
+  team-id: ${APPLE_TEAM_ID}
+  key-id: ${APPLE_KEY_ID}
+  private-key: ${APPLE_PRIVATE_KEY}

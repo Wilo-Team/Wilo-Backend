@@ -1,8 +1,10 @@
 package com.wilo.server.user.service;
 
+import jakarta.annotation.PostConstruct;
 import java.util.Base64;
 import javax.crypto.Cipher;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.util.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -11,7 +13,7 @@ public class CryptoService {
 
     private static final String ALGORITHM = "AES";
 
-    @Value("${spring.crypto.secretKey}")
+    @Value("${spring.crypto.secret-key}")
     private String secretKey;
 
     // ✅ 암호화

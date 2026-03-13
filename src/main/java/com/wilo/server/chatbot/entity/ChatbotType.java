@@ -30,12 +30,20 @@ public class ChatbotType {
     @Column(name = "is_active", nullable = false)
     private boolean isActive;
 
+    @Column(name = "background_color", length = 20)
+    private String backgroundColor;
+
+    @Column(name = "border_color", length = 20)
+    private String borderColor;
+
     public static ChatbotType create(
             String code,
             String name,
             String description,
             String imageUrl,
-            boolean isActive
+            boolean isActive,
+            String backgroundColor,
+            String borderColor
     ) {
         ChatbotType t = new ChatbotType();
         t.code = code;
@@ -43,6 +51,22 @@ public class ChatbotType {
         t.description = description;
         t.imageUrl = imageUrl;
         t.isActive = isActive;
+        t.backgroundColor = backgroundColor;
+        t.borderColor = borderColor;
         return t;
+    }
+
+    public void update(
+            String name,
+            String description,
+            String imageUrl,
+            String backgroundColor,
+            String borderColor
+    ) {
+        this.name = name;
+        this.description = description;
+        this.imageUrl = imageUrl;
+        this.backgroundColor = backgroundColor;
+        this.borderColor = borderColor;
     }
 }
