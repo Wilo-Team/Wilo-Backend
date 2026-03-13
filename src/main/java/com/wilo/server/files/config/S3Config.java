@@ -14,7 +14,7 @@ public class S3Config {
     private String accessKey;
     @Value("${cloud.aws.credentials.secret-key}")
     private String secretKey;
-    @Value("${cloud.aws.region.static}")
+    @Value("${cloud.aws.region.static:ap-northeast-2}")
     private String region;
 
     @Bean
