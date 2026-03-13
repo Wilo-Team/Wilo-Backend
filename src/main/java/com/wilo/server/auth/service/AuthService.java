@@ -1,5 +1,7 @@
 package com.wilo.server.auth.service;
 
+import com.wilo.server.auth.dto.AppleLoginRequestDto;
+import com.wilo.server.auth.dto.AppleWithdrawRequestDto;
 import com.wilo.server.auth.dto.LoginRequestDto;
 import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
 import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
@@ -13,7 +15,12 @@ import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
 import com.wilo.server.global.config.security.jwt.JwtTokenProvider;
 import com.wilo.server.global.exception.ApplicationException;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.HexFormat;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,6 +36,7 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PhoneVerificationCodeRepository phoneVerificationCodeRepository;
     private final NcpSensSmsService ncpSensSmsService;
+    private final AppleOAuthClient appleOAuthClient;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
@@ -69,6 +77,26 @@ public class AuthService {
     }
 
     @Transactional
+    public TokenResponseDto loginWithAppleAndIssueToken(AppleLoginRequestDto request) {
+        AppleOAuthClient.AppleIdentityClaims claims = appleOAuthClient.verifyAccessToken(request.accessToken());
+        String appleSyntheticEmail = buildAppleEmailFromSubject(claims.subject());
+
+        User user = userRepository.findByEmail(appleSyntheticEmail)
+                .orElseGet(() -> userRepository.save(
+                        User.builder()
+                                .email(appleSyntheticEmail)
+                                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                                .nickname(buildUniqueAppleNickname(claims.subject()))
+                                .description(null)
+                                .profileImageUrl(null)
+                                .phoneNumber(null)
+                                .build()
+                ));
+
+        return issueAndSaveTokens(user.getId());
+    }
+
+    @Transactional
     public TokenResponseDto refreshToken(TokenRequestDto tokenRequestDto) {
         String refreshToken = tokenRequestDto.getRefreshToken();
 
@@ -101,6 +129,16 @@ public class AuthService {
 
         Long userId = jwtTokenProvider.getUserId(refreshToken);
         refreshTokenRepository.deleteByUserId(userId);
+    }
+
+    @Transactional
+    public void withdrawAppleAccount(Long userId, AppleWithdrawRequestDto request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> ApplicationException.from(AuthErrorCase.UNAUTHORIZED));
+
+        appleOAuthClient.revokeByAuthorizationCode(request.authorizationCode());
+        refreshTokenRepository.deleteByUserId(userId);
+        userRepository.delete(user);
     }
 
     @Transactional
@@ -166,6 +204,34 @@ public class AuthService {
 
     private String buildNicknameFromPhone(String normalizedPhoneNumber) {
         return "user_" + normalizedPhoneNumber;
+    }
+
+    private String buildAppleEmailFromSubject(String appleSubject) {
+        return "apple-" + sha256Hex(appleSubject).substring(0, 24) + "@wilo.local";
+    }
+
+    private String buildUniqueAppleNickname(String appleSubject) {
+        String seed = sha256Hex(appleSubject).substring(0, 8);
+        String base = "apple_" + seed;
+        String candidate = base;
+        int suffix = 0;
+
+        while (userRepository.existsByNickname(candidate)) {
+            suffix++;
+            candidate = base + "_" + suffix;
+        }
+
+        return candidate;
+    }
+
+    private String sha256Hex(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(value.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 알고리즘을 사용할 수 없습니다.", e);
+        }
     }
 
     private String createVerificationCode() {
