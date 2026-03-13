@@ -2,7 +2,7 @@ name: Deploy to Production Server (Mac Mini)
 
 on:
   push:
-    branches: ["main"]
+    branches: ["fix/deploy-prod"]
   workflow_dispatch:
 
 permissions:
