@@ -79,6 +79,10 @@ jobs:
           NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }}
           NCP_SENDER_PHONE=${{ secrets.NCP_SENDER_PHONE }}
           NCP_SERVICE_ID=${{ secrets.NCP_SERVICE_ID }}
+          APPLE_CLIENT_ID=${{ secrets.APPLE_CLIENT_ID }}
+          APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}
+          APPLE_KEY_ID=${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY=${{ secrets.APPLE_PRIVATE_KEY }}
           EOF
         shell: bash
 

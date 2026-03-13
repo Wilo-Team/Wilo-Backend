@@ -64,7 +64,3 @@ apple:
   team-id: ${APPLE_TEAM_ID:}
   key-id: ${APPLE_KEY_ID:}
   private-key: ${APPLE_PRIVATE_KEY:}
-  issuer: ${APPLE_ISSUER:https://appleid.apple.com}
-  keys-uri: ${APPLE_KEYS_URI:https://appleid.apple.com/auth/keys}
-  token-uri: ${APPLE_TOKEN_URI:https://appleid.apple.com/auth/oauth2/v2/token}
-  revoke-uri: ${APPLE_REVOKE_URI:https://appleid.apple.com/auth/oauth2/v2/revoke}
