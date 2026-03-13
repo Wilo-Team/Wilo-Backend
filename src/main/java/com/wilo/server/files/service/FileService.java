@@ -1,8 +1,10 @@
 package com.wilo.server.files.service;
 
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.DeleteObjectRequest;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.wilo.server.files.exception.FileErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
 import java.io.IOException;
@@ -33,7 +35,15 @@ public class FileService {
         objectMetadata.setContentLength(file.getSize());
 
         try {
-            amazonS3Client.putObject(bucket, fileName, file.getInputStream(), objectMetadata);
+            PutObjectRequest putObjectRequest = new PutObjectRequest(
+                    bucket,
+                    fileName,
+                    file.getInputStream(),
+                    objectMetadata
+            ).withCannedAcl(CannedAccessControlList.PublicRead);
+
+            amazonS3Client.putObject(putObjectRequest);
+
         } catch (IOException e) {
             throw new ApplicationException(FileErrorCase.FILE_UPLOAD_FAILED);
         }
