@@ -1,12 +1,16 @@
 package com.wilo.server.auth.controller;
 
+import com.wilo.server.auth.dto.AppleLoginRequestDto;
+import com.wilo.server.auth.dto.AppleWithdrawRequestDto;
 import com.wilo.server.auth.dto.LoginRequestDto;
 import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
 import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
 import com.wilo.server.auth.dto.SignUpRequestDto;
 import com.wilo.server.auth.dto.TokenRequestDto;
 import com.wilo.server.auth.dto.TokenResponseDto;
+import com.wilo.server.auth.error.AuthErrorCase;
 import com.wilo.server.auth.service.AuthService;
+import com.wilo.server.global.exception.ApplicationException;
 import com.wilo.server.global.response.CommonResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -16,6 +20,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,6 +58,17 @@ public class AuthController {
         return CommonResponse.success(authService.loginAndIssueToken(request));
     }
 
+    @PostMapping("/apple/login")
+    @Operation(summary = "Apple 로그인", description = "Apple accessToken 검증 후 로그인/회원가입 및 JWT 토큰을 발급합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Apple accessToken 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<TokenResponseDto> appleLogin(@Valid @RequestBody AppleLoginRequestDto request) {
+        return CommonResponse.success(authService.loginWithAppleAndIssueToken(request));
+    }
+
     @PostMapping("/refresh")
     @Operation(summary = "토큰 재발급", description = "유효한 리프레시 토큰으로 access/refresh 토큰을 재발급합니다.")
     @ApiResponses(value = {
@@ -70,6 +87,19 @@ public class AuthController {
     public CommonResponse<String> logout(@RequestBody(required = false) TokenRequestDto tokenRequestDto) {
         authService.logout(tokenRequestDto);
         return CommonResponse.success("로그아웃 되었습니다.");
+    }
+
+    @DeleteMapping("/apple/withdraw")
+    @Operation(summary = "Apple 회원 탈퇴", description = "authorizationCode를 사용해 Apple 토큰을 철회하고 회원을 탈퇴 처리합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "회원 탈퇴 성공"),
+            @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "401", description = "인증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<String> withdrawAppleAccount(@Valid @RequestBody AppleWithdrawRequestDto request) {
+        Long userId = extractAuthenticatedUserId();
+        authService.withdrawAppleAccount(userId, request);
+        return CommonResponse.success("회원 탈퇴가 완료되었습니다.");
     }
 
     @PostMapping("/phone-verification/send")
@@ -129,5 +159,17 @@ public class AuthController {
     ) {
         authService.confirmPhoneVerificationCode(request);
         return CommonResponse.success("전화번호 인증이 완료되었습니다.");
+    }
+
+    private Long extractAuthenticatedUserId() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication() != null
+                ? SecurityContextHolder.getContext().getAuthentication().getPrincipal()
+                : null;
+
+        if (principal instanceof Long userId) {
+            return userId;
+        }
+
+        throw ApplicationException.from(AuthErrorCase.UNAUTHORIZED);
     }
 }

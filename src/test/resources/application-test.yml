@@ -64,3 +64,9 @@ ncp:
   secret-key: test
   sender-phone: 01012345678
   service-id: ncp:sms:kr:test:test
+
+apple:
+  client-id: test-client-id
+  team-id: test-team-id
+  key-id: test-key-id
+  private-key: test-private-key

@@ -58,3 +58,9 @@ ncp:
   secret-key: ${NCP_SECRET_KEY}
   sender-phone: ${NCP_SENDER_PHONE}
   service-id: ${NCP_SERVICE_ID}
+
+apple:
+  client-id: ${APPLE_CLIENT_ID}
+  team-id: ${APPLE_TEAM_ID}
+  key-id: ${APPLE_KEY_ID}
+  private-key: ${APPLE_PRIVATE_KEY}

@@ -1,10 +1,17 @@
 package com.wilo.server.domain.auth;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.wilo.server.auth.service.AppleOAuthClient;
+import com.wilo.server.global.config.security.jwt.JwtAuthentication;
 import com.wilo.server.auth.repository.RefreshTokenRepository;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
@@ -38,6 +45,9 @@ class AuthControllerTest {
 
     @MockitoBean
     private RefreshTokenRepository refreshTokenRepository;
+
+    @MockitoBean
+    private AppleOAuthClient appleOAuthClient;
 
     @BeforeEach
     void setUp() {
@@ -115,6 +125,46 @@ class AuthControllerTest {
         mockMvc.perform(post("/api/v1/auth/logout")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"accessToken\":\"a\",\"refreshToken\":\"r\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("success"));
+    }
+
+    @Test
+    void appleLogin_success() throws Exception {
+        when(appleOAuthClient.verifyAccessToken(anyString()))
+                .thenReturn(new AppleOAuthClient.AppleIdentityClaims("apple-sub-123", "relay@example.com"));
+
+        mockMvc.perform(post("/api/v1/auth/apple/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "accessToken": "dummy-token"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("success"))
+                .andExpect(jsonPath("$.data.accessToken").isString())
+                .andExpect(jsonPath("$.data.refreshToken").isString());
+    }
+
+    @Test
+    void appleWithdraw_success() throws Exception {
+        User user = userRepository.save(User.builder()
+                .email("apple-withdraw@example.com")
+                .password(passwordEncoder.encode("password1234"))
+                .nickname("appleWithdrawUser")
+                .build());
+
+        doNothing().when(appleOAuthClient).revokeByAuthorizationCode(anyString());
+
+        mockMvc.perform(delete("/api/v1/auth/apple/withdraw")
+                        .with(authentication(new JwtAuthentication(user.getId())))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "authorizationCode": "dummy-auth-code"
+                                }
+                                """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("success"));
     }
