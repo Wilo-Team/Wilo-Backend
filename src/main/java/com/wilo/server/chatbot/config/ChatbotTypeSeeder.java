@@ -22,15 +22,15 @@ public class ChatbotTypeSeeder implements ApplicationRunner {
     public void run(ApplicationArguments args) {
 
         seed("EUNHAENG", "편안한 친구", "지금의 상태를 먼저 읽어주는 존재",
-                "https://cdn.wilo.com/chatbot/eunhaeng.png","#FCEBB2",
+                "https://prod-wilo-bucket.s3.ap-northeast-2.amazonaws.com/image/2026/03/13/922b1fb0-e51b-4365-882e-d77ea2dd2aeb.png","#FCEBB2",
                 "#F4C008");
 
         seed("BUDDLE", "따뜻한 조력자", "선택을 대신하지 않고 정리해주는 존재",
-                "https://cdn.wilo.com/chatbot/buddle.png","#B0E7EE",
+                "https://prod-wilo-bucket.s3.ap-northeast-2.amazonaws.com/image/2026/03/13/ad3fa7fe-1767-4fc5-a506-4af0cb2f32f5.png","#B0E7EE",
                 "#00B3C9");
 
         seed("NEUTY", "안전한 동반자", "혼자가 되지 않도록 곁을 지키는 존재",
-                "https://cdn.wilo.com/chatbot/neuty.png","#F35A38",
+                "https://prod-wilo-bucket.s3.ap-northeast-2.amazonaws.com/image/2026/03/13/4df3ea0c-204a-4cef-b819-504a6d08e9fc.png","#F35A38",
                 "#FBCCC1");
     }
 
