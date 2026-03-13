@@ -35,14 +35,7 @@ public class FileService {
         objectMetadata.setContentLength(file.getSize());
 
         try {
-            PutObjectRequest putObjectRequest = new PutObjectRequest(
-                    bucket,
-                    fileName,
-                    file.getInputStream(),
-                    objectMetadata
-            ).withCannedAcl(CannedAccessControlList.PublicRead);
-
-            amazonS3Client.putObject(putObjectRequest);
+            amazonS3Client.putObject(bucket, fileName, file.getInputStream(), objectMetadata);
 
         } catch (IOException e) {
             throw new ApplicationException(FileErrorCase.FILE_UPLOAD_FAILED);
