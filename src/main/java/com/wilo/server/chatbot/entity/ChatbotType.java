@@ -55,4 +55,18 @@ public class ChatbotType {
         t.borderColor = borderColor;
         return t;
     }
+
+    public void update(
+            String name,
+            String description,
+            String imageUrl,
+            String backgroundColor,
+            String borderColor
+    ) {
+        this.name = name;
+        this.description = description;
+        this.imageUrl = imageUrl;
+        this.backgroundColor = backgroundColor;
+        this.borderColor = borderColor;
+    }
 }

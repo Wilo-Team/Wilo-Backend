@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.annotation.Order;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,23 +41,26 @@ public class ChatbotTypeSeeder implements ApplicationRunner {
             String backgroundColor,
             String borderColor
     ) {
-        if (chatbotTypeRepository.existsByCode(code)) {
-            return;
-        }
+        ChatbotType chatbotType = chatbotTypeRepository.findByCode(code)
+                .orElseGet(() ->
+                        ChatbotType.create(
+                                code,
+                                name,
+                                desc,
+                                imageUrl,
+                                true,
+                                backgroundColor,
+                                borderColor
+                        )
+                );
 
-        try {
-            chatbotTypeRepository.save(
-                    ChatbotType.create(
-                            code,
-                            name,
-                            desc,
-                            imageUrl,
-                            true,
-                            backgroundColor,
-                            borderColor
-                    )
-            );
-        } catch (DataIntegrityViolationException ignored) {
-        }
+        chatbotType.update(
+                name,
+                desc,
+                imageUrl,
+                backgroundColor,
+                borderColor
+        );
+        chatbotTypeRepository.save(chatbotType);
     }
 }
