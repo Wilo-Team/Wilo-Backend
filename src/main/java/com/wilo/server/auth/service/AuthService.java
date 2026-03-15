@@ -154,7 +154,8 @@ public class AuthService {
 
         User user = userRepository
                 .findByAuthProviderAndProviderUserId(AuthProvider.KAKAO, providerUserId)
-                .orElseGet(() -> createKakaoUser(providerUserId, email, nickname, profileImage));
+                .orElseGet(() -> createSocialUser(AuthProvider.KAKAO, providerUserId, email, nickname, profileImage));
+
 
         return issueAndSaveTokens(user.getId());
     }
@@ -170,7 +171,7 @@ public class AuthService {
 
         User user = userRepository
                 .findByAuthProviderAndProviderUserId(AuthProvider.NAVER, providerUserId)
-                .orElseGet(() -> createNaverUser(providerUserId, email, nickname, profileImage));
+                .orElseGet(() -> createSocialUser(AuthProvider.NAVER, providerUserId, email, nickname, profileImage));
 
         return issueAndSaveTokens(user.getId());
     }
@@ -273,19 +274,14 @@ public class AuthService {
         return String.format("%06d", code);
     }
 
-    private User createKakaoUser(
+    private User createSocialUser(
+            AuthProvider authProvider,
             String providerUserId,
             String email,
             String nickname,
             String profileImage
     ) {
-        String finalNickname = (nickname == null || nickname.isBlank())
-                ? generateRandomNickname()
-                : nickname;
-
-        if (userRepository.existsByNickname(finalNickname)) {
-            finalNickname = generateRandomNickname();
-        }
+        String finalNickname = resolveUniqueNickname(nickname);
 
         User user = User.builder()
                 .email(email)
@@ -295,40 +291,21 @@ public class AuthService {
                 .profileImageUrl(profileImage)
                 .phoneNumber(null)
                 .phoneVerified(false)
-                .authProvider(AuthProvider.KAKAO)
+                .authProvider(authProvider)
                 .providerUserId(providerUserId)
                 .build();
 
         return userRepository.save(user);
     }
 
-    private User createNaverUser(
-            String providerUserId,
-            String email,
-            String nickname,
-            String profileImage
-    ) {
-        String finalNickname = (nickname == null || nickname.isBlank())
-                ? generateRandomNickname()
-                : nickname;
-
-        if (userRepository.existsByNickname(finalNickname)) {
-            finalNickname = generateRandomNickname();
+    private String resolveUniqueNickname(String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            return generateRandomNickname();
         }
-
-        User user = User.builder()
-                .email(email)
-                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
-                .nickname(finalNickname)
-                .description(null)
-                .profileImageUrl(profileImage)
-                .phoneNumber(null)
-                .phoneVerified(false)
-                .authProvider(AuthProvider.NAVER)
-                .providerUserId(providerUserId)
-                .build();
-
-        return userRepository.save(user);
+        if (userRepository.existsByNickname(nickname)) {
+            return generateRandomNickname();
+        }
+        return nickname;
     }
 
     private String generateRandomNickname() {

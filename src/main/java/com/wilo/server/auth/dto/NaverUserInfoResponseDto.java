@@ -3,7 +3,8 @@ package com.wilo.server.auth.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public record NaverUserInfoResponseDto(
-        String resultcode,
+        @JsonProperty("resultcode")
+        String resultCode,
         String message,
         Response response
 
