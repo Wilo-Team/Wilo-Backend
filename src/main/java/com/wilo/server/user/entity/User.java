@@ -12,7 +12,12 @@ import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @Entity
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(
+                name = "uk_users_auth_provider_provider_user_id",
+                columnNames = {"auth_provider", "provider_user_id"}
+        )
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLDelete(sql = "UPDATE users SET deleted_at = now() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")

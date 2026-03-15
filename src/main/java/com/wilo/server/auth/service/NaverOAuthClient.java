@@ -31,6 +31,8 @@ public class NaverOAuthClient {
 
             return response;
 
+        } catch (ApplicationException e) {
+            throw e;
         } catch (Exception e) {
             throw new ApplicationException(AuthErrorCase.NAVER_API_COMMUNICATION_FAILED, e);
         }
