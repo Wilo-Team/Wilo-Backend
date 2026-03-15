@@ -21,7 +21,11 @@ public enum AuthErrorCase implements ErrorCase {
     APPLE_ACCESS_TOKEN_INVALID(401, 1011, "유효하지 않은 Apple access token 입니다."),
     APPLE_CONFIG_MISSING(500, 1012, "Apple 로그인 설정이 누락되었습니다."),
     APPLE_TOKEN_EXCHANGE_FAILED(400, 1013, "Apple 토큰 교환에 실패했습니다."),
-    APPLE_TOKEN_REVOKE_FAILED(500, 1014, "Apple 토큰 철회에 실패했습니다.");
+    APPLE_TOKEN_REVOKE_FAILED(500, 1014, "Apple 토큰 철회에 실패했습니다."),
+    INVALID_KAKAO_AUTH(401, 1015, "유효하지 않은 Kakao access token 입니다."),
+    KAKAO_API_COMMUNICATION_FAILED(502, 1016, "Kakao API 통신에 실패했습니다."),
+    INVALID_NAVER_AUTH(401, 1017, "유효하지 않은 Naver access token 입니다."),
+    NAVER_API_COMMUNICATION_FAILED(502, 1018, "Naver API 통신에 실패했습니다.");
 
     private final Integer httpStatusCode;
     private final Integer errorCode;
