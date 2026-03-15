@@ -70,7 +70,7 @@ public class User extends BaseEntity {
         this.profileImageUrl = profileImageUrl;
         this.phoneNumber = phoneNumber;
         this.phoneVerified = phoneVerified;
-        this.authProvider = authProvider;
+        this.authProvider = authProvider != null ? authProvider : AuthProvider.LOCAL;
         this.providerUserId = providerUserId;
     }
 
