@@ -87,6 +87,21 @@ public class AuthController {
         return CommonResponse.success(authService.loginWithKakaoAndIssueToken(request));
     }
 
+    @PostMapping("/naver/login")
+    @Operation(summary = "Naver 로그인", description = "Naver accessToken 검증 후 로그인/회원가입 및 JWT 토큰을 발급합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "400", description = "요청값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Naver accessToken 검증 실패",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<TokenResponseDto> naverLogin(
+            @Valid @RequestBody SocialLoginRequestDto request
+    ) {
+        return CommonResponse.success(authService.loginWithNaverAndIssueToken(request));
+    }
+
     @PostMapping("/logout")
     @Operation(summary = "로그아웃", description = "access/refresh 토큰 쿠키를 만료 처리합니다.")
     @ApiResponses(value = {
