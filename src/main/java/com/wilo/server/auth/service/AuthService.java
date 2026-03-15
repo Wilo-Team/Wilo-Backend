@@ -1,16 +1,10 @@
 package com.wilo.server.auth.service;
 
-import com.wilo.server.auth.dto.AppleLoginRequestDto;
-import com.wilo.server.auth.dto.AppleWithdrawRequestDto;
-import com.wilo.server.auth.dto.LoginRequestDto;
-import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
-import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
-import com.wilo.server.auth.dto.SignUpRequestDto;
-import com.wilo.server.auth.dto.TokenRequestDto;
-import com.wilo.server.auth.dto.TokenResponseDto;
+import com.wilo.server.auth.dto.*;
 import com.wilo.server.auth.error.AuthErrorCase;
 import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.auth.repository.RefreshTokenRepository;
+import com.wilo.server.user.entity.AuthProvider;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
 import com.wilo.server.global.config.security.jwt.JwtTokenProvider;
@@ -39,6 +33,7 @@ public class AuthService {
     private final AppleOAuthClient appleOAuthClient;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final KakaoOAuthClient kakaoOAuthClient;
 
     @Transactional
     public TokenResponseDto signUpAndIssueToken(SignUpRequestDto request) {
@@ -56,6 +51,9 @@ public class AuthService {
                         .description(null)
                         .profileImageUrl(null)
                         .phoneNumber(normalizedPhoneNumber)
+                        .phoneVerified(false)
+                        .authProvider(AuthProvider.LOCAL)
+                        .providerUserId(null)
                         .build()
         );
 
@@ -81,7 +79,7 @@ public class AuthService {
         AppleOAuthClient.AppleIdentityClaims claims = appleOAuthClient.verifyAccessToken(request.accessToken());
         String appleSyntheticEmail = buildAppleEmailFromSubject(claims.subject());
 
-        User user = userRepository.findByEmail(appleSyntheticEmail)
+        User user = userRepository.findByAuthProviderAndProviderUserId(AuthProvider.APPLE, claims.subject())
                 .orElseGet(() -> userRepository.save(
                         User.builder()
                                 .email(appleSyntheticEmail)
@@ -90,6 +88,9 @@ public class AuthService {
                                 .description(null)
                                 .profileImageUrl(null)
                                 .phoneNumber(null)
+                                .phoneVerified(false)
+                                .authProvider(AuthProvider.APPLE)
+                                .providerUserId(claims.subject())
                                 .build()
                 ));
 
@@ -139,6 +140,22 @@ public class AuthService {
         appleOAuthClient.revokeByAuthorizationCode(request.authorizationCode());
         refreshTokenRepository.deleteByUserId(userId);
         userRepository.delete(user);
+    }
+
+    @Transactional
+    public TokenResponseDto loginWithKakaoAndIssueToken(SocialLoginRequestDto request) {
+        KakaoUserInfoResponseDto userInfo = kakaoOAuthClient.getUserInfo(request.accessToken());
+
+        String providerUserId = String.valueOf(userInfo.id());
+        String email = userInfo.email();
+        String nickname = userInfo.nickname();
+        String profileImage = userInfo.profileImage();
+
+        User user = userRepository
+                .findByAuthProviderAndProviderUserId(AuthProvider.KAKAO, providerUserId)
+                .orElseGet(() -> createKakaoUser(providerUserId, email, nickname, profileImage));
+
+        return issueAndSaveTokens(user.getId());
     }
 
     @Transactional
@@ -237,5 +254,47 @@ public class AuthService {
     private String createVerificationCode() {
         int code = SECURE_RANDOM.nextInt(1_000_000);
         return String.format("%06d", code);
+    }
+
+    private User createKakaoUser(
+            String providerUserId,
+            String email,
+            String nickname,
+            String profileImage
+    ) {
+        String finalNickname = (nickname == null || nickname.isBlank())
+                ? generateRandomNickname()
+                : nickname;
+
+        if (userRepository.existsByNickname(finalNickname)) {
+            finalNickname = generateRandomNickname();
+        }
+
+        User user = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .nickname(finalNickname)
+                .description(null)
+                .profileImageUrl(profileImage)
+                .phoneNumber(null)
+                .phoneVerified(false)
+                .authProvider(AuthProvider.KAKAO)
+                .providerUserId(providerUserId)
+                .build();
+
+        return userRepository.save(user);
+    }
+
+    private String generateRandomNickname() {
+        String candidate;
+
+        do {
+            candidate = "user_" + UUID.randomUUID()
+                    .toString()
+                    .replace("-", "")
+                    .substring(0, 8);
+        } while (userRepository.existsByNickname(candidate));
+
+        return candidate;
     }
 }

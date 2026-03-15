@@ -1,13 +1,6 @@
 package com.wilo.server.auth.controller;
 
-import com.wilo.server.auth.dto.AppleLoginRequestDto;
-import com.wilo.server.auth.dto.AppleWithdrawRequestDto;
-import com.wilo.server.auth.dto.LoginRequestDto;
-import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
-import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
-import com.wilo.server.auth.dto.SignUpRequestDto;
-import com.wilo.server.auth.dto.TokenRequestDto;
-import com.wilo.server.auth.dto.TokenResponseDto;
+import com.wilo.server.auth.dto.*;
 import com.wilo.server.auth.error.AuthErrorCase;
 import com.wilo.server.auth.service.AuthService;
 import com.wilo.server.global.exception.ApplicationException;
@@ -77,6 +70,21 @@ public class AuthController {
     })
     public CommonResponse<TokenResponseDto> refreshToken(@RequestBody TokenRequestDto tokenRequestDto) {
         return CommonResponse.success(authService.refreshToken(tokenRequestDto));
+    }
+
+    @PostMapping("/kakao/login")
+    @Operation(summary = "Kakao 로그인", description = "Kakao accessToken 검증 후 로그인/회원가입 및 JWT 토큰을 발급합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "로그인 성공"),
+            @ApiResponse(responseCode = "400", description = "요청값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class))),
+            @ApiResponse(responseCode = "401", description = "Kakao accessToken 검증 실패",
+                    content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+    })
+    public CommonResponse<TokenResponseDto> kakaoLogin(
+            @Valid @RequestBody SocialLoginRequestDto request
+    ) {
+        return CommonResponse.success(authService.loginWithKakaoAndIssueToken(request));
     }
 
     @PostMapping("/logout")
