@@ -34,6 +34,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final KakaoOAuthClient kakaoOAuthClient;
+    private final NaverOAuthClient naverOAuthClient;
 
     @Transactional
     public TokenResponseDto signUpAndIssueToken(SignUpRequestDto request) {
@@ -159,6 +160,22 @@ public class AuthService {
     }
 
     @Transactional
+    public TokenResponseDto loginWithNaverAndIssueToken(SocialLoginRequestDto request) {
+        NaverUserInfoResponseDto userInfo = naverOAuthClient.getUserInfo(request.accessToken());
+
+        String providerUserId = userInfo.id();
+        String email = userInfo.email();
+        String nickname = userInfo.nickname();
+        String profileImage = userInfo.profileImage();
+
+        User user = userRepository
+                .findByAuthProviderAndProviderUserId(AuthProvider.NAVER, providerUserId)
+                .orElseGet(() -> createNaverUser(providerUserId, email, nickname, profileImage));
+
+        return issueAndSaveTokens(user.getId());
+    }
+
+    @Transactional
     public void sendPhoneVerificationCode(PhoneVerificationSendRequestDto request) {
         String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
         issuePhoneVerificationCode(normalizedPhoneNumber);
@@ -279,6 +296,35 @@ public class AuthService {
                 .phoneNumber(null)
                 .phoneVerified(false)
                 .authProvider(AuthProvider.KAKAO)
+                .providerUserId(providerUserId)
+                .build();
+
+        return userRepository.save(user);
+    }
+
+    private User createNaverUser(
+            String providerUserId,
+            String email,
+            String nickname,
+            String profileImage
+    ) {
+        String finalNickname = (nickname == null || nickname.isBlank())
+                ? generateRandomNickname()
+                : nickname;
+
+        if (userRepository.existsByNickname(finalNickname)) {
+            finalNickname = generateRandomNickname();
+        }
+
+        User user = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .nickname(finalNickname)
+                .description(null)
+                .profileImageUrl(profileImage)
+                .phoneNumber(null)
+                .phoneVerified(false)
+                .authProvider(AuthProvider.NAVER)
                 .providerUserId(providerUserId)
                 .build();
 
