@@ -1,16 +1,10 @@
 package com.wilo.server.auth.service;
 
-import com.wilo.server.auth.dto.AppleLoginRequestDto;
-import com.wilo.server.auth.dto.AppleWithdrawRequestDto;
-import com.wilo.server.auth.dto.LoginRequestDto;
-import com.wilo.server.auth.dto.PhoneVerificationConfirmRequestDto;
-import com.wilo.server.auth.dto.PhoneVerificationSendRequestDto;
-import com.wilo.server.auth.dto.SignUpRequestDto;
-import com.wilo.server.auth.dto.TokenRequestDto;
-import com.wilo.server.auth.dto.TokenResponseDto;
+import com.wilo.server.auth.dto.*;
 import com.wilo.server.auth.error.AuthErrorCase;
 import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.auth.repository.RefreshTokenRepository;
+import com.wilo.server.user.entity.AuthProvider;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.repository.UserRepository;
 import com.wilo.server.global.config.security.jwt.JwtTokenProvider;
@@ -39,6 +33,8 @@ public class AuthService {
     private final AppleOAuthClient appleOAuthClient;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
+    private final KakaoOAuthClient kakaoOAuthClient;
+    private final NaverOAuthClient naverOAuthClient;
 
     @Transactional
     public TokenResponseDto signUpAndIssueToken(SignUpRequestDto request) {
@@ -56,6 +52,9 @@ public class AuthService {
                         .description(null)
                         .profileImageUrl(null)
                         .phoneNumber(normalizedPhoneNumber)
+                        .phoneVerified(false)
+                        .authProvider(AuthProvider.LOCAL)
+                        .providerUserId(null)
                         .build()
         );
 
@@ -81,7 +80,7 @@ public class AuthService {
         AppleOAuthClient.AppleIdentityClaims claims = appleOAuthClient.verifyAccessToken(request.accessToken());
         String appleSyntheticEmail = buildAppleEmailFromSubject(claims.subject());
 
-        User user = userRepository.findByEmail(appleSyntheticEmail)
+        User user = userRepository.findByAuthProviderAndProviderUserId(AuthProvider.APPLE, claims.subject())
                 .orElseGet(() -> userRepository.save(
                         User.builder()
                                 .email(appleSyntheticEmail)
@@ -90,6 +89,9 @@ public class AuthService {
                                 .description(null)
                                 .profileImageUrl(null)
                                 .phoneNumber(null)
+                                .phoneVerified(false)
+                                .authProvider(AuthProvider.APPLE)
+                                .providerUserId(claims.subject())
                                 .build()
                 ));
 
@@ -139,6 +141,39 @@ public class AuthService {
         appleOAuthClient.revokeByAuthorizationCode(request.authorizationCode());
         refreshTokenRepository.deleteByUserId(userId);
         userRepository.delete(user);
+    }
+
+    @Transactional
+    public TokenResponseDto loginWithKakaoAndIssueToken(SocialLoginRequestDto request) {
+        KakaoUserInfoResponseDto userInfo = kakaoOAuthClient.getUserInfo(request.accessToken());
+
+        String providerUserId = String.valueOf(userInfo.id());
+        String email = userInfo.email();
+        String nickname = userInfo.nickname();
+        String profileImage = userInfo.profileImage();
+
+        User user = userRepository
+                .findByAuthProviderAndProviderUserId(AuthProvider.KAKAO, providerUserId)
+                .orElseGet(() -> createSocialUser(AuthProvider.KAKAO, providerUserId, email, nickname, profileImage));
+
+
+        return issueAndSaveTokens(user.getId());
+    }
+
+    @Transactional
+    public TokenResponseDto loginWithNaverAndIssueToken(SocialLoginRequestDto request) {
+        NaverUserInfoResponseDto userInfo = naverOAuthClient.getUserInfo(request.accessToken());
+
+        String providerUserId = userInfo.id();
+        String email = userInfo.email();
+        String nickname = userInfo.nickname();
+        String profileImage = userInfo.profileImage();
+
+        User user = userRepository
+                .findByAuthProviderAndProviderUserId(AuthProvider.NAVER, providerUserId)
+                .orElseGet(() -> createSocialUser(AuthProvider.NAVER, providerUserId, email, nickname, profileImage));
+
+        return issueAndSaveTokens(user.getId());
     }
 
     @Transactional
@@ -237,5 +272,52 @@ public class AuthService {
     private String createVerificationCode() {
         int code = SECURE_RANDOM.nextInt(1_000_000);
         return String.format("%06d", code);
+    }
+
+    private User createSocialUser(
+            AuthProvider authProvider,
+            String providerUserId,
+            String email,
+            String nickname,
+            String profileImage
+    ) {
+        String finalNickname = resolveUniqueNickname(nickname);
+
+        User user = User.builder()
+                .email(email)
+                .password(passwordEncoder.encode(UUID.randomUUID().toString()))
+                .nickname(finalNickname)
+                .description(null)
+                .profileImageUrl(profileImage)
+                .phoneNumber(null)
+                .phoneVerified(false)
+                .authProvider(authProvider)
+                .providerUserId(providerUserId)
+                .build();
+
+        return userRepository.save(user);
+    }
+
+    private String resolveUniqueNickname(String nickname) {
+        if (nickname == null || nickname.isBlank()) {
+            return generateRandomNickname();
+        }
+        if (userRepository.existsByNickname(nickname)) {
+            return generateRandomNickname();
+        }
+        return nickname;
+    }
+
+    private String generateRandomNickname() {
+        String candidate;
+
+        do {
+            candidate = "user_" + UUID.randomUUID()
+                    .toString()
+                    .replace("-", "")
+                    .substring(0, 8);
+        } while (userRepository.existsByNickname(candidate));
+
+        return candidate;
     }
 }

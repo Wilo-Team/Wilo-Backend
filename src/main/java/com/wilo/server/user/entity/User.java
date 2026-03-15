@@ -2,13 +2,7 @@ package com.wilo.server.user.entity;
 
 import com.wilo.server.global.entity.BaseEntity;
 import com.wilo.server.user.service.CryptoConverter;
-import jakarta.persistence.Column;
-import jakarta.persistence.Convert;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,7 +12,12 @@ import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @Entity
-@Table(name = "users")
+@Table(name = "users", uniqueConstraints = {
+        @UniqueConstraint(
+                name = "uk_users_auth_provider_provider_user_id",
+                columnNames = {"auth_provider", "provider_user_id"}
+        )
+})
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLDelete(sql = "UPDATE users SET deleted_at = now() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")
@@ -50,8 +49,25 @@ public class User extends BaseEntity {
     @Column(nullable = false)
     private boolean phoneVerified;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AuthProvider authProvider;
+
+    @Column(length = 100)
+    private String providerUserId;
+
     @Builder
-    private User(String email, String password, String nickname, String description, String profileImageUrl, String phoneNumber, boolean phoneVerified) {
+    private User(
+            String email,
+            String password,
+            String nickname,
+            String description,
+            String profileImageUrl,
+            String phoneNumber,
+            boolean phoneVerified,
+            AuthProvider authProvider,
+            String providerUserId
+    ) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
@@ -59,6 +75,8 @@ public class User extends BaseEntity {
         this.profileImageUrl = profileImageUrl;
         this.phoneNumber = phoneNumber;
         this.phoneVerified = phoneVerified;
+        this.authProvider = authProvider != null ? authProvider : AuthProvider.LOCAL;
+        this.providerUserId = providerUserId;
     }
 
     public void updateProfile(String nickname, String description, String phoneNumber) {
