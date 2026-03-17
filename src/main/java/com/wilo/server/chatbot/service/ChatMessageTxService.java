@@ -21,6 +21,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -59,7 +61,6 @@ public class ChatMessageTxService {
 
     @Transactional
     public ChatMessage saveUserMessage(Long sessionId, ChatMessageSendRequest request) {
-
         ChatMessage message = ChatMessage.createUser(
                 sessionId,
                 request.getMessageType(),
@@ -68,13 +69,31 @@ public class ChatMessageTxService {
 
         ChatMessage saved = chatMessageRepository.save(message);
 
+        // 세션 조회
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
+
+        // 첫 메시지라면 title 업데이트
+        if ("새로운 대화".equals(session.getTitle())) {
+            String title = request.getMessage().trim();
+
+            if (title.length() > 30) {
+                title = title.substring(0, 30);
+            }
+
+            session.updateTitle(title);
+        }
+
+        // 마지막 메시지 시간 업데이트
+        session.updateLastMessageAt(LocalDateTime.now());
+
         List<Long> mediaIds = request.getMediaIds();
         if (mediaIds != null && !mediaIds.isEmpty()) {
 
-            // media 존재 검증 (중복 검증 포함)
+            // media 존재 검증
             List<Long> distinctMediaIds = mediaIds.stream().distinct().toList();
             List<Media> medias = mediaRepository.findAllById(distinctMediaIds);
-            if (medias.size() != distinctMediaIds.size()){
+            if (medias.size() != distinctMediaIds.size()) {
                 throw new ApplicationException(MediaErrorCase.MEDIA_NOT_FOUND);
             }
 
