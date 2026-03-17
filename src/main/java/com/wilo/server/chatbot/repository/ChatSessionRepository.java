@@ -26,6 +26,7 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, Long> 
                 (:guestId is not null and cs.guestId = :guestId)
             )
           and cs.status = :status
+          and cs.lastMessageAt is not null
           and (
                 :cursorActivityAt is null
                 or (
