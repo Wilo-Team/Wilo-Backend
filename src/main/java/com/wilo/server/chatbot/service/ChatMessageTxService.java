@@ -74,18 +74,20 @@ public class ChatMessageTxService {
                 .orElseThrow(() -> new ApplicationException(ChatbotErrorCase.SESSION_NOT_FOUND));
 
         // 첫 메시지라면 title 업데이트
-        if ("새로운 대화".equals(session.getTitle())) {
+        if ("새로운 대화".equals(session.getTitle())
+                && request.getMessageType() == MessageType.TEXT
+                && request.getMessage() != null) {
             String title = request.getMessage().trim();
-
-            if (title.length() > 30) {
-                title = title.substring(0, 30);
+            if (!title.isEmpty()) {
+                if (title.length() > 30) {
+                    title = title.substring(0, 30);
+                }
+                session.updateTitle(title);
             }
-
-            session.updateTitle(title);
         }
 
         // 마지막 메시지 시간 업데이트
-        session.updateLastMessageAt(LocalDateTime.now());
+        session.updateLastMessageAt(saved.getCreatedAt());
 
         List<Long> mediaIds = request.getMediaIds();
         if (mediaIds != null && !mediaIds.isEmpty()) {
