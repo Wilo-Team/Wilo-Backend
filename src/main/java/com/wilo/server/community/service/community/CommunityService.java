@@ -1,0 +1,423 @@
+package com.wilo.server.community.service.community;
+
+import com.wilo.server.community.dto.comment.CommunityCommentCreateRequestDto;
+import com.wilo.server.community.dto.comment.CommunityCommentDto;
+import com.wilo.server.community.dto.post.CommunityLikeResponseDto;
+import com.wilo.server.community.dto.comment.CommunityPostAuthorDto;
+import com.wilo.server.community.dto.post.CommunityPostCreateRequestDto;
+import com.wilo.server.community.dto.post.CommunityPostDetailResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostListResponseDto;
+import com.wilo.server.community.dto.post.CommunityPostSummaryDto;
+import com.wilo.server.community.dto.post.CommunityPostUpdateRequestDto;
+import com.wilo.server.community.dto.comment.CommunityUserCommentListResponseDto;
+import com.wilo.server.community.dto.comment.CommunityUserCommentSummaryDto;
+import com.wilo.server.community.entity.post.CommunityCategory;
+import com.wilo.server.community.entity.comment.CommunityComment;
+import com.wilo.server.community.entity.post.CommunityPost;
+import com.wilo.server.community.entity.post.CommunityPostImage;
+import com.wilo.server.community.entity.post.CommunityPostLike;
+import com.wilo.server.community.error.CommunityErrorCase;
+import com.wilo.server.community.repository.CommunityCommentRepository;
+import com.wilo.server.community.repository.CommunityPostImageRepository;
+import com.wilo.server.community.repository.CommunityPostLikeRepository;
+import com.wilo.server.community.repository.CommunityPostRepository;
+import com.wilo.server.global.exception.ApplicationException;
+import com.wilo.server.notification.service.NotificationService;
+import com.wilo.server.user.entity.User;
+import com.wilo.server.user.error.UserErrorCase;
+import com.wilo.server.user.repository.UserRepository;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+@RequiredArgsConstructor
+public class CommunityService {
+
+    private static final int MAX_PAGE_SIZE = 50;
+    private static final int CONTENT_PREVIEW_LENGTH = 120;
+
+    private final CommunityPostRepository communityPostRepository;
+    private final CommunityPostImageRepository communityPostImageRepository;
+    private final CommunityCommentRepository communityCommentRepository;
+    private final CommunityPostLikeRepository communityPostLikeRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
+
+    @Transactional
+    public Long createPost(Long userId, CommunityPostCreateRequestDto request) {
+        User user = getUserOrThrow(userId);
+
+        CommunityPost post = communityPostRepository.save(
+                CommunityPost.builder()
+                        .user(user)
+                        .category(request.category())
+                        .title(request.title())
+                        .content(request.content())
+                        .build()
+        );
+
+        List<String> imageUrls = request.imageUrls();
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            List<CommunityPostImage> images = new ArrayList<>();
+            for (int i = 0; i < imageUrls.size(); i++) {
+                images.add(CommunityPostImage.builder()
+                        .post(post)
+                        .imageUrl(imageUrls.get(i))
+                        .sortOrder(i)
+                        .build());
+            }
+            communityPostImageRepository.saveAll(images);
+        }
+
+        return post.getId();
+    }
+
+    @Transactional
+    public Long updatePost(Long userId, Long postId, CommunityPostUpdateRequestDto request) {
+        getUserOrThrow(userId);
+        CommunityPost post = getPostOrThrow(postId);
+
+        if (!post.getUser().getId().equals(userId)) {
+            throw ApplicationException.from(CommunityErrorCase.FORBIDDEN_POST_UPDATE);
+        }
+
+        post.updatePost(request.category(), request.title(), request.content());
+        post.replaceImages(request.imageUrls());
+
+        return post.getId();
+    }
+
+    @Transactional
+    public void deletePost(Long userId, Long postId) {
+        getUserOrThrow(userId);
+        CommunityPost post = getPostOrThrow(postId);
+
+        if (!post.getUser().getId().equals(userId)) {
+            throw ApplicationException.from(CommunityErrorCase.FORBIDDEN_POST_DELETE);
+        }
+
+        communityPostRepository.delete(post);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityPostListResponseDto getPostsByAuthor(
+            Long authorUserId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityPost> fetchedPosts = communityPostRepository.findLatestPostsByAuthorCursor(
+                authorUserId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedPosts.size() > safeSize;
+        List<CommunityPost> pagePosts = hasNext ? fetchedPosts.subList(0, safeSize) : fetchedPosts;
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
+
+        String nextCursor = null;
+        if (hasNext && !pagePosts.isEmpty()) {
+            CommunityPost lastPost = pagePosts.get(pagePosts.size() - 1);
+            nextCursor = LatestCursor.of(lastPost).toCursorValue();
+        }
+
+        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityUserCommentListResponseDto getCommentsByAuthor(
+            Long authorUserId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityComment> fetchedComments = communityCommentRepository.findLatestByUserIdCursor(
+                authorUserId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedComments.size() > safeSize;
+        List<CommunityComment> pageComments = hasNext ? fetchedComments.subList(0, safeSize) : fetchedComments;
+
+        List<CommunityUserCommentSummaryDto> items = pageComments.stream()
+                .map(comment -> new CommunityUserCommentSummaryDto(
+                        comment.getId(),
+                        comment.getPost().getId(),
+                        comment.getPost().getTitle(),
+                        comment.getContent(),
+                        comment.getCreatedAt(),
+                        calculateDaysAgo(comment.getCreatedAt())
+                ))
+                .toList();
+
+        String nextCursor = null;
+        if (hasNext && !pageComments.isEmpty()) {
+            CommunityComment lastComment = pageComments.get(pageComments.size() - 1);
+            nextCursor = lastComment.getCreatedAt() + "|" + lastComment.getId();
+        }
+
+        return new CommunityUserCommentListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional(readOnly = true)
+    public CommunityPostListResponseDto getLikedPostsByUser(
+            Long userId,
+            String cursor,
+            Integer size
+    ) {
+        int safeSize = size == null || size < 1 ? 20 : Math.min(size, MAX_PAGE_SIZE);
+        Pageable pageable = PageRequest.of(0, safeSize + 1);
+
+        LatestCursor latestCursor = LatestCursor.from(cursor);
+        List<CommunityPostLike> fetchedLikes = communityPostLikeRepository.findLikedPostsByUserIdCursor(
+                userId,
+                latestCursor.createdAt(),
+                latestCursor.id(),
+                pageable
+        );
+
+        boolean hasNext = fetchedLikes.size() > safeSize;
+        List<CommunityPostLike> pageLikes = hasNext ? fetchedLikes.subList(0, safeSize) : fetchedLikes;
+        List<CommunityPost> pagePosts = pageLikes.stream()
+                .map(CommunityPostLike::getPost)
+                .toList();
+
+        List<CommunityPostSummaryDto> items = toSummaryItems(pagePosts);
+
+        String nextCursor = null;
+        if (hasNext && !pageLikes.isEmpty()) {
+            CommunityPostLike lastLike = pageLikes.get(pageLikes.size() - 1);
+            nextCursor = lastLike.getCreatedAt() + "|" + lastLike.getId();
+        }
+
+        return new CommunityPostListResponseDto(items, cursor, safeSize, hasNext, nextCursor);
+    }
+
+    @Transactional
+    public CommunityPostDetailResponseDto getPostDetail(Long postId) {
+        CommunityPost post = getPostOrThrow(postId);
+        post.increaseViewCount();
+
+        List<String> imageUrls = communityPostImageRepository.findByPostIdOrderBySortOrderAsc(postId).stream()
+                .map(CommunityPostImage::getImageUrl)
+                .toList();
+
+        List<CommunityComment> comments = communityCommentRepository.findByPostIdOrderByCreatedAtAscIdAsc(postId);
+        List<CommunityCommentDto> commentTree = buildCommentTree(comments);
+
+        return new CommunityPostDetailResponseDto(
+                post.getId(),
+                post.getCategory(),
+                post.getCategory().getDisplayName(),
+                post.getTitle(),
+                post.getContent(),
+                post.getCreatedAt(),
+                calculateDaysAgo(post.getCreatedAt()),
+                post.getViewCount(),
+                post.getLikeCount(),
+                post.getCommentCount(),
+                CommunityPostAuthorDto.from(post.getUser()),
+                imageUrls,
+                commentTree
+        );
+    }
+
+    @Transactional
+    public CommunityCommentDto createComment(Long userId, Long postId, CommunityCommentCreateRequestDto request) {
+        User user = getUserOrThrow(userId);
+        CommunityPost post = getPostOrThrow(postId);
+
+        CommunityComment parentComment = null;
+        if (request.parentCommentId() != null) {
+            parentComment = communityCommentRepository.findById(request.parentCommentId())
+                    .orElseThrow(() -> ApplicationException.from(CommunityErrorCase.COMMENT_NOT_FOUND));
+
+            if (!parentComment.getPost().getId().equals(postId)) {
+                throw ApplicationException.from(CommunityErrorCase.INVALID_PARENT_COMMENT);
+            }
+
+            if (parentComment.getParentComment() != null) {
+                throw ApplicationException.from(CommunityErrorCase.REPLY_DEPTH_NOT_ALLOWED);
+            }
+        }
+
+        CommunityComment comment = communityCommentRepository.save(
+                CommunityComment.builder()
+                        .post(post)
+                        .user(user)
+                        .parentComment(parentComment)
+                        .content(request.content())
+                        .build()
+        );
+
+        post.increaseCommentCount();
+        notificationService.notifyComment(post, user, comment);
+
+        return CommunityCommentDto.of(
+                comment.getId(),
+                CommunityPostAuthorDto.from(user),
+                comment.getContent(),
+                calculateDaysAgo(comment.getCreatedAt()),
+                comment.getCreatedAt()
+        );
+    }
+
+    @Transactional
+    public CommunityLikeResponseDto likePost(Long userId, Long postId) {
+        User user = getUserOrThrow(userId);
+        CommunityPost post = getPostOrThrow(postId);
+
+        boolean alreadyLiked = communityPostLikeRepository.existsByPostIdAndUserId(postId, userId);
+        if (!alreadyLiked) {
+            communityPostLikeRepository.save(
+                    CommunityPostLike.builder()
+                            .post(post)
+                            .user(user)
+                            .build()
+            );
+            post.increaseLikeCount();
+            notificationService.notifyPostLike(post, user);
+        }
+
+        return new CommunityLikeResponseDto(true, post.getLikeCount());
+    }
+
+    @Transactional
+    public CommunityLikeResponseDto unlikePost(Long userId, Long postId) {
+        getUserOrThrow(userId);
+        CommunityPost post = getPostOrThrow(postId);
+
+        communityPostLikeRepository.findByPostIdAndUserId(postId, userId)
+                .ifPresent(like -> {
+                    communityPostLikeRepository.delete(like);
+                    post.decreaseLikeCount();
+                });
+
+        return new CommunityLikeResponseDto(false, post.getLikeCount());
+    }
+
+    private List<CommunityCommentDto> buildCommentTree(List<CommunityComment> comments) {
+        Map<Long, CommunityCommentDto> commentMap = new HashMap<>();
+        List<CommunityCommentDto> roots = new ArrayList<>();
+
+        for (CommunityComment comment : comments) {
+            CommunityCommentDto dto = CommunityCommentDto.of(
+                    comment.getId(),
+                    CommunityPostAuthorDto.from(comment.getUser()),
+                    comment.getContent(),
+                    calculateDaysAgo(comment.getCreatedAt()),
+                    comment.getCreatedAt()
+            );
+            commentMap.put(comment.getId(), dto);
+        }
+
+        for (CommunityComment comment : comments) {
+            CommunityCommentDto dto = commentMap.get(comment.getId());
+            CommunityComment parent = comment.getParentComment();
+
+            if (parent == null) {
+                roots.add(dto);
+                continue;
+            }
+
+            CommunityCommentDto parentDto = commentMap.get(parent.getId());
+            if (parentDto == null) {
+                roots.add(dto);
+                continue;
+            }
+
+            parentDto.replies().add(dto);
+        }
+
+        return roots;
+    }
+
+    private User getUserOrThrow(Long userId) {
+        return userRepository.findById(userId)
+                .orElseThrow(() -> ApplicationException.from(UserErrorCase.USER_NOT_FOUND));
+    }
+
+    private CommunityPost getPostOrThrow(Long postId) {
+        return communityPostRepository.findById(postId)
+                .orElseThrow(() -> ApplicationException.from(CommunityErrorCase.POST_NOT_FOUND));
+    }
+
+    private List<CommunityPostSummaryDto> toSummaryItems(List<CommunityPost> posts) {
+        return posts.stream()
+                .map(post -> new CommunityPostSummaryDto(
+                        post.getId(),
+                        post.getCategory(),
+                        post.getCategory().getDisplayName(),
+                        post.getTitle(),
+                        createPreview(post.getContent()),
+                        post.getCreatedAt(),
+                        calculateDaysAgo(post.getCreatedAt()),
+                        post.getViewCount(),
+                        post.getLikeCount(),
+                        post.getCommentCount()
+                ))
+                .toList();
+    }
+
+    private long calculateDaysAgo(LocalDateTime createdAt) {
+        return ChronoUnit.DAYS.between(createdAt.toLocalDate(), LocalDate.now());
+    }
+
+    private String createPreview(String content) {
+        if (content == null) {
+            return "";
+        }
+        if (content.length() <= CONTENT_PREVIEW_LENGTH) {
+            return content;
+        }
+        return content.substring(0, CONTENT_PREVIEW_LENGTH) + "...";
+    }
+
+    private record LatestCursor(LocalDateTime createdAt, Long id) {
+        private static LatestCursor from(String cursor) {
+            if (cursor == null || cursor.isBlank()) {
+                return new LatestCursor(null, null);
+            }
+
+            String[] parts = cursor.split("\\|");
+            if (parts.length != 2) {
+                return new LatestCursor(null, null);
+            }
+
+            try {
+                return new LatestCursor(LocalDateTime.parse(parts[0]), Long.parseLong(parts[1]));
+            } catch (RuntimeException e) {
+                return new LatestCursor(null, null);
+            }
+        }
+
+        private static LatestCursor of(CommunityPost post) {
+            return new LatestCursor(post.getCreatedAt(), post.getId());
+        }
+
+        private String toCursorValue() {
+            return createdAt + "|" + id;
+        }
+    }
+
+}

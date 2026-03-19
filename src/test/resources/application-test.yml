@@ -1,0 +1,72 @@
+spring:
+
+  site:
+    url: http://localhost:8080
+
+  datasource:
+    url: jdbc:h2:mem:wilo-test;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        show_sql: false
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      repositories:
+        enabled: false
+
+  h2:
+    console:
+      enabled: false
+
+  crypto:
+    secret-key: ${SPRING_CRYPTO_SECRET_KEY}
+
+ai:
+  base-url: http://localhost:8000
+
+logging:
+  level:
+    root: warn
+
+
+jwt:
+  secret: ${JWT_SECRET:wilo-test-jwt-secret-32-bytes-required-for-validation}
+  access-exp: 3600000
+  refresh-exp: 1209600000
+
+
+cloud:
+  aws:
+    s3:
+      bucket: test-bucket
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
+    credentials:
+      access-key: test
+      secret-key: test
+
+ncp:
+  access-key: test
+  secret-key: test
+  sender-phone: 01012345678
+  service-id: ncp:sms:kr:test:test
+
+apple:
+  client-id: test-client-id
+  team-id: test-team-id
+  key-id: test-key-id
+  private-key: test-private-key

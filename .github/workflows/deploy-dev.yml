@@ -1,0 +1,137 @@
+name: Deploy to Development Server (Mac Mini)
+
+on:
+  push:
+    branches: ["develop"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-push-dev:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Create application-prod.yml
+        run: |
+          mkdir -p ./src/main/resources
+          echo "${{ secrets.APPLICATION_DEV }}" > ./src/main/resources/application-prod.yml
+        shell: bash
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew clean build -x test
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      - name: Build and push Docker image
+        run: |
+          docker build \
+            -t ${{ secrets.DOCKER_USERNAME }}/wilo:dev-latest \
+            -t ${{ secrets.DOCKER_USERNAME }}/wilo:dev-${{ github.sha }} \
+            .
+          docker push ${{ secrets.DOCKER_USERNAME }}/wilo:dev-latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/wilo:dev-${{ github.sha }}
+
+  deploy-dev:
+    runs-on: self-hosted
+    needs: build-and-push-dev
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          cat > .env.dev << EOF_ENV
+          DOCKER_USERNAME=${{ secrets.DOCKER_USERNAME }}
+          MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          JWT_ACCESS_EXP=${{ secrets.JWT_ACCESS_EXP }}
+          JWT_REFRESH_EXP=${{ secrets.JWT_REFRESH_EXP }}
+          SENTRY_DSN=${{ secrets.SENTRY_DSN }}
+          SENTRY_AUTH_TOKEN=${{ secrets.SENTRY_AUTH_TOKEN }}
+          CLOUD_AWS_S3_BUCKET=${{ secrets.CLOUD_AWS_S3_BUCKET }}
+          CLOUD_AWS_CREDENTIALS_ACCESS_KEY=${{ secrets.CLOUD_AWS_CREDENTIALS_ACCESS_KEY }}
+          CLOUD_AWS_CREDENTIALS_SECRET_KEY=${{ secrets.CLOUD_AWS_CREDENTIALS_SECRET_KEY }}
+          AI_BASE_URL=${{ secrets.AI_BASE_URL }}
+          SPRING_CRYPTO_SECRET_KEY=${{ secrets.CRYPTO_SECRET_KEY }}
+          NCP_ACCESS_KEY=${{ secrets.NCP_ACCESS_KEY }}
+          NCP_SECRET_KEY=${{ secrets.NCP_SECRET_KEY }}
+          NCP_SENDER_PHONE=${{ secrets.NCP_SENDER_PHONE }}
+          NCP_SERVICE_ID=${{ secrets.NCP_SERVICE_ID }}
+          APPLE_CLIENT_ID=${{ secrets.APPLE_CLIENT_ID }}
+          APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}
+          APPLE_KEY_ID=${{ secrets.APPLE_KEY_ID }}
+          APPLE_PRIVATE_KEY=${{ secrets.APPLE_PRIVATE_KEY }}
+          EOF_ENV
+        shell: bash
+
+      - name: Validate required env
+        run: |
+          for key in DOCKER_USERNAME JWT_SECRET JWT_ACCESS_EXP JWT_REFRESH_EXP SPRING_CRYPTO_SECRET_KEY CLOUD_AWS_S3_BUCKET CLOUD_AWS_CREDENTIALS_ACCESS_KEY CLOUD_AWS_CREDENTIALS_SECRET_KEY NCP_ACCESS_KEY NCP_SECRET_KEY NCP_SENDER_PHONE NCP_SERVICE_ID; do
+            if ! grep -q "^${key}=.\\+" .env.dev; then
+              echo "ERROR: Missing required ${key} in .env.dev"
+              exit 1
+            fi
+          done
+          echo "env validation passed."
+        shell: bash
+
+      - name: Deploy with Docker Compose
+        run: |
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d mysql-dev redis-dev
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev pull app-dev
+
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev stop app-dev || true
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev rm -f app-dev || true
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d app-dev
+
+          echo "Waiting for development application to be healthy..."
+          timeout=120
+          elapsed=0
+          healthy=false
+
+          while [ $elapsed -lt $timeout ]; do
+            HEALTH_STATUS=$(docker inspect --format='{{.State.Health.Status}}' wilo-app-dev 2>/dev/null || echo "none")
+            if [ "$HEALTH_STATUS" = "healthy" ]; then
+              echo "Development application is healthy!"
+              healthy=true
+              break
+            fi
+            echo "Waiting... ($elapsed seconds) - Current status: $HEALTH_STATUS"
+            sleep 5
+            elapsed=$((elapsed + 5))
+          done
+
+          if [ "$healthy" = false ]; then
+            echo "ERROR: Development application failed to become healthy within $timeout seconds"
+            docker-compose -f docker-compose.dev.yml --env-file .env.dev logs --tail=100 app-dev
+            exit 1
+          fi
+
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev ps
+          echo "=== Development Application Logs ==="
+          docker-compose -f docker-compose.dev.yml --env-file .env.dev logs --tail=50 app-dev
+        shell: bash
+
+      - name: Clean up old Docker images
+        run: docker image prune -f --filter "until=24h"
+        shell: bash
+        continue-on-error: true

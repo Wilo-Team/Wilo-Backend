@@ -1,0 +1,13 @@
+package com.wilo.server.auth.dto;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class TokenRequestDto {
+    private String accessToken;
+    private String refreshToken;
+}
