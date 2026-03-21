@@ -84,5 +84,22 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     """)
     int deleteBySessionIds(@Param("sessionIds") Collection<Long> sessionIds);
 
+    @Query("""
+        select m
+        from ChatMessage m
+        where m.sessionId = :sessionId
+        order by m.id asc
+    """)
+    List<ChatMessage> findAllBySessionIdOrderByIdAsc(@Param("sessionId") Long sessionId);
+
+    @Query("""
+        select m
+        from ChatMessage m
+        where m.sessionId = :sessionId
+        and m.senderType = com.wilo.server.chatbot.entity.SenderType.BOT
+        order by m.id asc
+    """)
+    List<ChatMessage> findBotMessagesBySessionIdAsc(@Param("sessionId") Long sessionId, Pageable pageable);
+
     Optional<ChatMessage> findById(Long id);
 }
