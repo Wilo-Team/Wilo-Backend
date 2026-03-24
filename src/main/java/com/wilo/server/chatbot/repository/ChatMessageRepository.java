@@ -1,6 +1,7 @@
 package com.wilo.server.chatbot.repository;
 
 import com.wilo.server.chatbot.entity.ChatMessage;
+import com.wilo.server.chatbot.entity.SenderType;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -83,6 +84,38 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
         where m.sessionId in :sessionIds
     """)
     int deleteBySessionIds(@Param("sessionIds") Collection<Long> sessionIds);
+
+    @Query("""
+        select m
+        from ChatMessage m
+        where m.sessionId = :sessionId
+        order by m.id asc
+    """)
+    List<ChatMessage> findAllBySessionIdOrderByIdAsc(@Param("sessionId") Long sessionId);
+
+    @Query("""
+        select m
+        from ChatMessage m
+        where m.sessionId = :sessionId
+          and m.senderType = com.wilo.server.chatbot.entity.SenderType.BOT
+        order by m.id asc
+    """)
+    List<ChatMessage> findBotMessagesBySessionIdAsc(
+            @Param("sessionId") Long sessionId,
+            Pageable pageable
+    );
+
+    @Query("""
+        select m
+        from ChatMessage m
+        where m.sessionId = :sessionId
+          and m.senderType = com.wilo.server.chatbot.entity.SenderType.BOT
+        order by m.id asc
+    """)
+    List<ChatMessage> findFirstBotMessage(
+            @Param("sessionId") Long sessionId,
+            Pageable pageable
+    );
 
     Optional<ChatMessage> findById(Long id);
 }
