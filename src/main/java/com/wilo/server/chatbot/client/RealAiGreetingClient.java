@@ -43,7 +43,7 @@ public class RealAiGreetingClient implements AiGreetingClient {
                 .bodyValue(req)
                 .retrieve()
                 .onStatus(
-                        s -> s.value() == 502 || s.value() == 503 || s.value() == 504,
+                        s -> s.is5xxServerError(),
                         r -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_SERVER_FAILED))
                 )
                 .onStatus(

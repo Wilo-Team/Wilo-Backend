@@ -60,7 +60,7 @@ public class ChatGreetingService {
                         .userId(requester)
                         .sessionId(sessionId)
                         .personaId(personaCode)
-                        .sessionSummary(chatMessageTxService.getSessionSummary(sessionId))
+                        .sessionSummary(null)
                         .recentMessages(java.util.List.of())
                         .memory(null)
                         .build()
