@@ -35,19 +35,12 @@ public class ChatGreetingService {
         // 세션 접근 검증 + persona
         String personaCode = chatMessageTxService.getPersonaCodeWithAuthCheck(sessionId, userId, guestId);
 
-        // 이미 메시지가 있으면 greeting 중복 생성하지 않고 첫 BOT 반환
-        var existingMessages = chatMessageRepository.findBySessionIdCursorDesc(sessionId, null, PageRequest.of(0, 1));
-        if (!existingMessages.isEmpty()) {
-            ChatMessage existingFirstBot = chatMessageRepository
-                    .findAllBySessionIdOrderByIdAsc(sessionId)
-                    .stream()
-                    .filter(m -> m.getSenderType().name().equals("BOT"))
-                    .findFirst()
-                    .orElse(existingMessages.get(0));
-
+        // 첫 번째 BOT 메시지만 조회 (없으면 빈 리스트)
+        var botMessages = chatMessageRepository.findBotMessagesBySessionIdAsc(sessionId, PageRequest.of(0, 1));
+        if (!botMessages.isEmpty()) {
             return ChatGreetingResponse.builder()
                     .sessionId(sessionId)
-                    .botMessage(chatMessageTxService.toDto(existingFirstBot))
+                    .botMessage(chatMessageTxService.toDto(botMessages.get(0)))
                     .build();
         }
 
