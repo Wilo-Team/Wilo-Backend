@@ -77,21 +77,31 @@ public class AuthService {
 
     @Transactional
     public TokenResponseDto loginWithAppleAndIssueToken(AppleLoginRequestDto request) {
-        AppleOAuthClient.AppleIdentityClaims claims = appleOAuthClient.verifyAccessToken(request.accessToken());
-        String appleSyntheticEmail = buildAppleEmailFromSubject(claims.subject());
+        AppleOAuthClient.AppleTokenExchangeResult exchangeResult =
+                appleOAuthClient.exchangeAuthorizationCode(request.authorizationCode());
+        AppleOAuthClient.AppleIdentityClaims exchangedClaims =
+                appleOAuthClient.verifyIdentityToken(exchangeResult.identityToken());
+        AppleOAuthClient.AppleIdentityClaims clientClaims =
+                appleOAuthClient.verifyIdentityToken(request.identityToken());
 
-        User user = userRepository.findByAuthProviderAndProviderUserId(AuthProvider.APPLE, claims.subject())
+        if (!exchangedClaims.subject().equals(clientClaims.subject())) {
+            throw ApplicationException.from(AuthErrorCase.APPLE_ACCESS_TOKEN_INVALID);
+        }
+
+        String appleSyntheticEmail = buildAppleEmailFromSubject(exchangedClaims.subject());
+
+        User user = userRepository.findByAuthProviderAndProviderUserId(AuthProvider.APPLE, exchangedClaims.subject())
                 .orElseGet(() -> userRepository.save(
                         User.builder()
                                 .email(appleSyntheticEmail)
                                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
-                                .nickname(buildUniqueAppleNickname(claims.subject()))
+                                .nickname(buildUniqueAppleNickname(exchangedClaims.subject()))
                                 .description(null)
                                 .profileImageUrl(null)
                                 .phoneNumber(null)
                                 .phoneVerified(false)
                                 .authProvider(AuthProvider.APPLE)
-                                .providerUserId(claims.subject())
+                                .providerUserId(exchangedClaims.subject())
                                 .build()
                 ));
 
