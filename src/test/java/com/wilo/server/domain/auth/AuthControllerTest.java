@@ -131,14 +131,23 @@ class AuthControllerTest {
 
     @Test
     void appleLogin_success() throws Exception {
-        when(appleOAuthClient.verifyAccessToken(anyString()))
+        when(appleOAuthClient.exchangeAuthorizationCode(anyString()))
+                .thenReturn(new AppleOAuthClient.AppleTokenExchangeResult(
+                        "apple-access-token",
+                        "apple-identity-token-from-apple",
+                        "apple-refresh-token"
+                ));
+        when(appleOAuthClient.verifyIdentityToken("apple-identity-token-from-apple"))
+                .thenReturn(new AppleOAuthClient.AppleIdentityClaims("apple-sub-123", "relay@example.com"));
+        when(appleOAuthClient.verifyIdentityToken("apple-identity-token-from-client"))
                 .thenReturn(new AppleOAuthClient.AppleIdentityClaims("apple-sub-123", "relay@example.com"));
 
         mockMvc.perform(post("/api/v1/auth/apple/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "accessToken": "dummy-token"
+                                  "authorizationCode": "dummy-auth-code",
+                                  "identityToken": "apple-identity-token-from-client"
                                 }
                                 """))
                 .andExpect(status().isOk())

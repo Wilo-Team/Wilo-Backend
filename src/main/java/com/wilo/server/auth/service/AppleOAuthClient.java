@@ -45,11 +45,52 @@ public class AppleOAuthClient {
     private volatile Map<String, PublicKey> cachedPublicKeys = Map.of();
     private volatile long cachedAtMillis = 0L;
 
-    public AppleIdentityClaims verifyAccessToken(String accessToken) {
+    public AppleTokenExchangeResult exchangeAuthorizationCode(String authorizationCode) {
         validateAppleConfig();
 
         try {
-            String[] jwtParts = accessToken.split("\\.");
+            WebClient webClient = webClientBuilder.build();
+            String clientSecret = generateClientSecret();
+
+            MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+            formData.add("grant_type", "authorization_code");
+            formData.add("code", authorizationCode);
+            formData.add("client_id", properties.getClientId());
+            formData.add("client_secret", clientSecret);
+
+            JsonNode response = webClient.post()
+                    .uri(properties.getTokenUri())
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(BodyInserters.fromFormData(formData))
+                    .retrieve()
+                    .bodyToMono(JsonNode.class)
+                    .block();
+
+            if (response == null) {
+                throw ApplicationException.from(AuthErrorCase.APPLE_TOKEN_EXCHANGE_FAILED);
+            }
+
+            String accessToken = response.path("access_token").asText("");
+            String identityToken = response.path("id_token").asText("");
+            String refreshToken = response.path("refresh_token").asText("");
+
+            if (accessToken.isBlank() || identityToken.isBlank()) {
+                throw ApplicationException.from(AuthErrorCase.APPLE_TOKEN_EXCHANGE_FAILED);
+            }
+
+            return new AppleTokenExchangeResult(accessToken, identityToken, refreshToken);
+        } catch (ApplicationException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ApplicationException(AuthErrorCase.APPLE_TOKEN_EXCHANGE_FAILED, e);
+        }
+    }
+
+    public AppleIdentityClaims verifyIdentityToken(String identityToken) {
+        validateAppleConfig();
+
+        try {
+            String[] jwtParts = identityToken.split("\\.");
             if (jwtParts.length != 3) {
                 throw ApplicationException.from(AuthErrorCase.APPLE_ACCESS_TOKEN_INVALID);
             }
@@ -68,7 +109,7 @@ public class AppleOAuthClient {
             Claims claims = Jwts.parserBuilder()
                     .setSigningKey(publicKey)
                     .build()
-                    .parseClaimsJws(accessToken)
+                    .parseClaimsJws(identityToken)
                     .getBody();
 
             if (!properties.getIssuer().equals(claims.getIssuer())) {
@@ -93,11 +134,17 @@ public class AppleOAuthClient {
 
     public void revokeByAuthorizationCode(String authorizationCode) {
         validateAppleConfig();
-        String refreshToken = exchangeAuthorizationCode(authorizationCode);
-        revokeRefreshToken(refreshToken);
+        AppleTokenExchangeResult tokenExchangeResult = exchangeAuthorizationCode(authorizationCode);
+        if (tokenExchangeResult.refreshToken().isBlank()) {
+            throw ApplicationException.from(AuthErrorCase.APPLE_TOKEN_EXCHANGE_FAILED);
+        }
+        revokeRefreshToken(tokenExchangeResult.refreshToken());
     }
 
     public record AppleIdentityClaims(String subject, String email) {
+    }
+
+    public record AppleTokenExchangeResult(String accessToken, String identityToken, String refreshToken) {
     }
 
     private PublicKey resolvePublicKey(String kid) {
@@ -158,37 +205,6 @@ public class AppleOAuthClient {
             throw e;
         } catch (Exception e) {
             throw new ApplicationException(AuthErrorCase.APPLE_ACCESS_TOKEN_INVALID, e);
-        }
-    }
-
-    private String exchangeAuthorizationCode(String authorizationCode) {
-        try {
-            WebClient webClient = webClientBuilder.build();
-            String clientSecret = generateClientSecret();
-
-            MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
-            formData.add("grant_type", "authorization_code");
-            formData.add("code", authorizationCode);
-            formData.add("client_id", properties.getClientId());
-            formData.add("client_secret", clientSecret);
-
-            JsonNode response = webClient.post()
-                    .uri(properties.getTokenUri())
-                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                    .body(BodyInserters.fromFormData(formData))
-                    .retrieve()
-                    .bodyToMono(JsonNode.class)
-                    .block();
-
-            if (response == null || !response.hasNonNull("refresh_token")) {
-                throw ApplicationException.from(AuthErrorCase.APPLE_TOKEN_EXCHANGE_FAILED);
-            }
-
-            return response.get("refresh_token").asText();
-        } catch (ApplicationException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new ApplicationException(AuthErrorCase.APPLE_TOKEN_EXCHANGE_FAILED, e);
         }
     }
 

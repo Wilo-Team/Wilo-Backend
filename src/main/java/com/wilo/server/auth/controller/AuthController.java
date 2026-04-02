@@ -52,11 +52,11 @@ public class AuthController {
     }
 
     @PostMapping("/apple/login")
-    @Operation(summary = "Apple 로그인", description = "Apple accessToken 검증 후 로그인/회원가입 및 JWT 토큰을 발급합니다.")
+    @Operation(summary = "Apple 로그인", description = "Apple authorizationCode를 서버에서 교환하고 identityToken을 검증한 뒤 로그인/회원가입 및 JWT 토큰을 발급합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "로그인 성공"),
             @ApiResponse(responseCode = "400", description = "요청값 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class))),
-            @ApiResponse(responseCode = "401", description = "Apple accessToken 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
+            @ApiResponse(responseCode = "401", description = "Apple 인증 정보 검증 실패", content = @Content(schema = @Schema(implementation = CommonResponse.class)))
     })
     public CommonResponse<TokenResponseDto> appleLogin(@Valid @RequestBody AppleLoginRequestDto request) {
         return CommonResponse.success(authService.loginWithAppleAndIssueToken(request));
