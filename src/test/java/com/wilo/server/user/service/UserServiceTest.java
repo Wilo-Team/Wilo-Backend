@@ -7,8 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.wilo.server.auth.error.AuthErrorCase;
+import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.files.service.FileService;
 import com.wilo.server.global.exception.ApplicationException;
+import com.wilo.server.user.dto.UserPasswordUpdateRequestDto;
 import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.error.UserErrorCase;
@@ -32,6 +35,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private PhoneVerificationCodeRepository phoneVerificationCodeRepository;
 
     @InjectMocks
     private UserService userService;
@@ -135,5 +141,78 @@ class UserServiceTest {
         );
 
         assertEquals(UserErrorCase.NICKNAME_ALREADY_EXISTS, exception.getErrorCase());
+    }
+
+    @Test
+    void updatePassword_updatesPasswordWhenPhoneAndVerificationCodeMatch() {
+        User user = User.builder()
+                .email("test@example.com")
+                .password("encoded-old-password")
+                .nickname("nickname")
+                .phoneNumber("01012345678")
+                .build();
+
+        when(userRepository.findByPhoneNumber("01012345678")).thenReturn(Optional.of(user));
+        when(phoneVerificationCodeRepository.findByPhoneNumber("01012345678")).thenReturn(Optional.of("123456"));
+        when(passwordEncoder.matches("newPassword123", "encoded-old-password")).thenReturn(false);
+        when(passwordEncoder.encode("newPassword123")).thenReturn("encoded-new-password");
+
+        userService.updatePassword(new UserPasswordUpdateRequestDto(
+                "010-1234-5678",
+                "123456",
+                "newPassword123"
+        ));
+
+        verify(phoneVerificationCodeRepository).deleteByPhoneNumber("01012345678");
+        assertEquals("encoded-new-password", user.getPassword());
+    }
+
+    @Test
+    void updatePassword_throwsWhenVerificationCodeMismatch() {
+        User user = User.builder()
+                .email("test@example.com")
+                .password("encoded-old-password")
+                .nickname("nickname")
+                .phoneNumber("01012345678")
+                .build();
+
+        when(userRepository.findByPhoneNumber("01012345678")).thenReturn(Optional.of(user));
+        when(phoneVerificationCodeRepository.findByPhoneNumber("01012345678")).thenReturn(Optional.of("999999"));
+
+        ApplicationException exception = assertThrows(
+                ApplicationException.class,
+                () -> userService.updatePassword(new UserPasswordUpdateRequestDto(
+                        "010-1234-5678",
+                        "123456",
+                        "newPassword123"
+                ))
+        );
+
+        assertEquals(AuthErrorCase.PHONE_VERIFICATION_CODE_MISMATCH, exception.getErrorCase());
+    }
+
+    @Test
+    void updatePassword_throwsWhenNewPasswordSameAsCurrent() {
+        User user = User.builder()
+                .email("test@example.com")
+                .password("encoded-old-password")
+                .nickname("nickname")
+                .phoneNumber("01012345678")
+                .build();
+
+        when(userRepository.findByPhoneNumber("01012345678")).thenReturn(Optional.of(user));
+        when(phoneVerificationCodeRepository.findByPhoneNumber("01012345678")).thenReturn(Optional.of("123456"));
+        when(passwordEncoder.matches("oldPassword123", "encoded-old-password")).thenReturn(true);
+
+        ApplicationException exception = assertThrows(
+                ApplicationException.class,
+                () -> userService.updatePassword(new UserPasswordUpdateRequestDto(
+                        "010-1234-5678",
+                        "123456",
+                        "oldPassword123"
+                ))
+        );
+
+        assertEquals(UserErrorCase.SAME_AS_CURRENT_PASSWORD, exception.getErrorCase());
     }
 }
