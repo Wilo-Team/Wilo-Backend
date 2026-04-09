@@ -85,13 +85,6 @@ public class UserService {
         User user = userRepository.findByPhoneNumber(normalizedPhoneNumber)
                 .orElseThrow(() -> ApplicationException.from(UserErrorCase.USER_NOT_FOUND));
 
-        String savedCode = phoneVerificationCodeRepository.findByPhoneNumber(normalizedPhoneNumber)
-                .orElseThrow(() -> ApplicationException.from(AuthErrorCase.PHONE_VERIFICATION_CODE_EXPIRED));
-
-        if (!savedCode.equals(request.verificationCode())) {
-            throw ApplicationException.from(AuthErrorCase.PHONE_VERIFICATION_CODE_MISMATCH);
-        }
-
         if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
             throw ApplicationException.from(UserErrorCase.SAME_AS_CURRENT_PASSWORD);
         }
