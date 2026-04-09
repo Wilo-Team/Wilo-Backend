@@ -7,8 +7,11 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.wilo.server.auth.error.AuthErrorCase;
+import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.files.service.FileService;
 import com.wilo.server.global.exception.ApplicationException;
+import com.wilo.server.user.dto.UserPasswordUpdateRequestDto;
 import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.error.UserErrorCase;
@@ -32,6 +35,9 @@ class UserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private PhoneVerificationCodeRepository phoneVerificationCodeRepository;
 
     @InjectMocks
     private UserService userService;
