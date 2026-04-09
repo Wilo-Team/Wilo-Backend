@@ -159,7 +159,6 @@ class UserServiceTest {
 
         userService.updatePassword(new UserPasswordUpdateRequestDto(
                 "010-1234-5678",
-                "123456",
                 "newPassword123"
         ));
 
@@ -183,7 +182,6 @@ class UserServiceTest {
                 ApplicationException.class,
                 () -> userService.updatePassword(new UserPasswordUpdateRequestDto(
                         "010-1234-5678",
-                        "123456",
                         "newPassword123"
                 ))
         );
@@ -208,7 +206,6 @@ class UserServiceTest {
                 ApplicationException.class,
                 () -> userService.updatePassword(new UserPasswordUpdateRequestDto(
                         "010-1234-5678",
-                        "123456",
                         "oldPassword123"
                 ))
         );
