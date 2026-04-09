@@ -94,7 +94,7 @@ public class UserController {
     }
 
     @PatchMapping("/password")
-    @Operation(summary = "내 비밀번호 변경", description = "요청으로 받은 새 비밀번호로 변경합니다. 새 비밀번호는 BCrypt로 암호화되어 저장됩니다.")
+    @Operation(summary = "비밀번호 찾기/재설정", description = "전화번호와 인증번호를 검증한 뒤 새 비밀번호로 변경합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "변경 성공"),
             @ApiResponse(
@@ -106,19 +106,18 @@ public class UserController {
                     )
             ),
             @ApiResponse(
-                    responseCode = "401",
-                    description = "인증 실패",
+                    responseCode = "404",
+                    description = "유저 없음",
                     content = @Content(
                             schema = @Schema(implementation = CommonResponse.class),
-                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                            examples = @ExampleObject(value = "{\"errorCode\":3001,\"message\":\"유저를 찾을 수 없습니다.\"}")
                     )
             )
     })
     public CommonResponse<String> updatePassword(
             @Valid @RequestBody UserPasswordUpdateRequestDto request
     ) {
-        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        userService.updatePassword(userId, request);
+        userService.updatePassword(request);
         return CommonResponse.success("비밀번호가 변경되었습니다.");
     }
 

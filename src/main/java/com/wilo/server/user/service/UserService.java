@@ -1,5 +1,7 @@
 package com.wilo.server.user.service;
 
+import com.wilo.server.auth.error.AuthErrorCase;
+import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.files.service.FileService;
 import com.wilo.server.files.exception.FileErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
@@ -24,6 +26,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final FileService fileService;
     private final PasswordEncoder passwordEncoder;
+    private final PhoneVerificationCodeRepository phoneVerificationCodeRepository;
 
     @Transactional(readOnly = true)
     public UserResponseDto getUserProfile(Long userId) {
@@ -77,10 +80,28 @@ public class UserService {
     }
 
     @Transactional
-    public void updatePassword(Long userId, UserPasswordUpdateRequestDto request) {
-        User user = getUserOrThrow(userId);
+    public void updatePassword(UserPasswordUpdateRequestDto request) {
+        String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+        User user = userRepository.findByPhoneNumber(normalizedPhoneNumber)
+                .orElseThrow(() -> ApplicationException.from(UserErrorCase.USER_NOT_FOUND));
 
+        String savedCode = phoneVerificationCodeRepository.findByPhoneNumber(normalizedPhoneNumber)
+                .orElseThrow(() -> ApplicationException.from(AuthErrorCase.PHONE_VERIFICATION_CODE_EXPIRED));
+
+        if (!savedCode.equals(request.verificationCode())) {
+            throw ApplicationException.from(AuthErrorCase.PHONE_VERIFICATION_CODE_MISMATCH);
+        }
+
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw ApplicationException.from(UserErrorCase.SAME_AS_CURRENT_PASSWORD);
+        }
+
+        phoneVerificationCodeRepository.deleteByPhoneNumber(normalizedPhoneNumber);
         user.updatePassword(passwordEncoder.encode(request.newPassword()));
+    }
+
+    private String normalizePhoneNumber(String phoneNumber) {
+        return phoneNumber.replaceAll("\\D", "");
     }
 
     private User getUserOrThrow(Long userId) {
