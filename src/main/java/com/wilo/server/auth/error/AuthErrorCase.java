@@ -25,7 +25,8 @@ public enum AuthErrorCase implements ErrorCase {
     INVALID_KAKAO_AUTH(401, 1015, "유효하지 않은 Kakao access token 입니다."),
     KAKAO_API_COMMUNICATION_FAILED(502, 1016, "Kakao API 통신에 실패했습니다."),
     INVALID_NAVER_AUTH(401, 1017, "유효하지 않은 Naver access token 입니다."),
-    NAVER_API_COMMUNICATION_FAILED(502, 1018, "Naver API 통신에 실패했습니다.");
+    NAVER_API_COMMUNICATION_FAILED(502, 1018, "Naver API 통신에 실패했습니다."),
+    PHONE_VERIFICATION_REQUIRED(400, 1019, "전화번호 인증이 필요합니다.");
 
     private final Integer httpStatusCode;
     private final Integer errorCode;

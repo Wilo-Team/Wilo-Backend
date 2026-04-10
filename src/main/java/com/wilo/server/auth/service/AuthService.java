@@ -218,6 +218,7 @@ public class AuthService {
         }
 
         phoneVerificationCodeRepository.deleteByPhoneNumber(normalizedPhoneNumber);
+        phoneVerificationCodeRepository.savePasswordResetVerified(normalizedPhoneNumber);
         userRepository.findAllByPhoneNumber(normalizedPhoneNumber)
                 .forEach(User::markPhoneVerified);
     }

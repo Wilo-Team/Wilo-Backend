@@ -11,7 +11,8 @@ import com.wilo.server.auth.error.AuthErrorCase;
 import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.files.service.FileService;
 import com.wilo.server.global.exception.ApplicationException;
-import com.wilo.server.user.dto.UserPasswordUpdateRequestDto;
+import com.wilo.server.user.dto.UserPasswordChangeRequestDto;
+import com.wilo.server.user.dto.UserPasswordResetRequestDto;
 import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.entity.User;
 import com.wilo.server.user.error.UserErrorCase;
@@ -141,5 +142,75 @@ class UserServiceTest {
         );
 
         assertEquals(UserErrorCase.NICKNAME_ALREADY_EXISTS, exception.getErrorCase());
+    }
+
+    @Test
+    void resetPassword_updatesWhenPhoneVerificationCompleted() {
+        User user = User.builder()
+                .email("test@example.com")
+                .password("encoded-old-password")
+                .nickname("nickname")
+                .phoneNumber("01012345678")
+                .build();
+
+        when(phoneVerificationCodeRepository.isPasswordResetVerified("01012345678")).thenReturn(true);
+        when(userRepository.findByPhoneNumber("01012345678")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("newPassword123", "encoded-old-password")).thenReturn(false);
+        when(passwordEncoder.encode("newPassword123")).thenReturn("encoded-new-password");
+
+        userService.resetPassword(new UserPasswordResetRequestDto("010-1234-5678", "newPassword123"));
+
+        verify(phoneVerificationCodeRepository).deletePasswordResetVerified("01012345678");
+        assertEquals("encoded-new-password", user.getPassword());
+    }
+
+    @Test
+    void resetPassword_throwsWhenPhoneVerificationNotCompleted() {
+        when(phoneVerificationCodeRepository.isPasswordResetVerified("01012345678")).thenReturn(false);
+
+        ApplicationException exception = assertThrows(
+                ApplicationException.class,
+                () -> userService.resetPassword(new UserPasswordResetRequestDto("010-1234-5678", "newPassword123"))
+        );
+
+        assertEquals(AuthErrorCase.PHONE_VERIFICATION_REQUIRED, exception.getErrorCase());
+    }
+
+    @Test
+    void changePassword_updatesWithNewPasswordOnly() {
+        User user = User.builder()
+                .email("test@example.com")
+                .password("encoded-old-password")
+                .nickname("nickname")
+                .phoneNumber("01012345678")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("newPassword123", "encoded-old-password")).thenReturn(false);
+        when(passwordEncoder.encode("newPassword123")).thenReturn("encoded-new-password");
+
+        userService.changePassword(1L, new UserPasswordChangeRequestDto("newPassword123"));
+
+        assertEquals("encoded-new-password", user.getPassword());
+    }
+
+    @Test
+    void changePassword_throwsWhenNewPasswordSameAsCurrent() {
+        User user = User.builder()
+                .email("test@example.com")
+                .password("encoded-old-password")
+                .nickname("nickname")
+                .phoneNumber("01012345678")
+                .build();
+
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("oldPassword123", "encoded-old-password")).thenReturn(true);
+
+        ApplicationException exception = assertThrows(
+                ApplicationException.class,
+                () -> userService.changePassword(1L, new UserPasswordChangeRequestDto("oldPassword123"))
+        );
+
+        assertEquals(UserErrorCase.SAME_AS_CURRENT_PASSWORD, exception.getErrorCase());
     }
 }
