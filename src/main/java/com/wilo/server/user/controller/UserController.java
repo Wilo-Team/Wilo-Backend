@@ -1,7 +1,8 @@
 package com.wilo.server.user.controller;
 
 import com.wilo.server.global.response.CommonResponse;
-import com.wilo.server.user.dto.UserPasswordUpdateRequestDto;
+import com.wilo.server.user.dto.UserPasswordChangeRequestDto;
+import com.wilo.server.user.dto.UserPasswordResetRequestDto;
 import com.wilo.server.user.dto.UserResponseDto;
 import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.service.UserService;
@@ -93,8 +94,8 @@ public class UserController {
         return CommonResponse.success(userService.updateUserProfile(userId, request));
     }
 
-    @PatchMapping("/password")
-    @Operation(summary = "비밀번호 찾기/재설정", description = "전화번호와 인증번호를 검증한 뒤 새 비밀번호로 변경합니다.")
+    @PatchMapping("/password/reset")
+    @Operation(summary = "비밀번호 찾기/재설정", description = "비로그인 상태에서 선행된 전화번호 인증 완료 상태를 확인한 뒤 새 비밀번호로 변경합니다.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "변경 성공"),
             @ApiResponse(
@@ -114,10 +115,39 @@ public class UserController {
                     )
             )
     })
-    public CommonResponse<String> updatePassword(
-            @Valid @RequestBody UserPasswordUpdateRequestDto request
+    public CommonResponse<String> resetPassword(
+            @Valid @RequestBody UserPasswordResetRequestDto request
     ) {
-        userService.updatePassword(request);
+        userService.resetPassword(request);
+        return CommonResponse.success("비밀번호가 변경되었습니다.");
+    }
+
+    @PatchMapping("/password/change")
+    @Operation(summary = "내 비밀번호 변경", description = "로그인 상태에서 새 비밀번호로 변경합니다.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "변경 성공"),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "요청값 검증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":4001,\"message\":\"요청 값이 유효하지 않습니다.\"}")
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "인증 실패",
+                    content = @Content(
+                            schema = @Schema(implementation = CommonResponse.class),
+                            examples = @ExampleObject(value = "{\"errorCode\":1005,\"message\":\"로그인이 필요합니다.\"}")
+                    )
+            )
+    })
+    public CommonResponse<String> changePassword(
+            @Valid @RequestBody UserPasswordChangeRequestDto request
+    ) {
+        Long userId = (Long) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        userService.changePassword(userId, request);
         return CommonResponse.success("비밀번호가 변경되었습니다.");
     }
 

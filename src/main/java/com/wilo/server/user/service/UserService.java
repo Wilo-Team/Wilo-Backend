@@ -5,7 +5,8 @@ import com.wilo.server.auth.repository.PhoneVerificationCodeRepository;
 import com.wilo.server.files.service.FileService;
 import com.wilo.server.files.exception.FileErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
-import com.wilo.server.user.dto.UserPasswordUpdateRequestDto;
+import com.wilo.server.user.dto.UserPasswordChangeRequestDto;
+import com.wilo.server.user.dto.UserPasswordResetRequestDto;
 import com.wilo.server.user.dto.UserResponseDto;
 import com.wilo.server.user.dto.UserUpdateRequestDto;
 import com.wilo.server.user.entity.User;
@@ -80,8 +81,13 @@ public class UserService {
     }
 
     @Transactional
-    public void updatePassword(UserPasswordUpdateRequestDto request) {
+    public void resetPassword(UserPasswordResetRequestDto request) {
         String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
+
+        if (!phoneVerificationCodeRepository.isPasswordResetVerified(normalizedPhoneNumber)) {
+            throw ApplicationException.from(AuthErrorCase.PHONE_VERIFICATION_REQUIRED);
+        }
+
         User user = userRepository.findByPhoneNumber(normalizedPhoneNumber)
                 .orElseThrow(() -> ApplicationException.from(UserErrorCase.USER_NOT_FOUND));
 
@@ -89,7 +95,18 @@ public class UserService {
             throw ApplicationException.from(UserErrorCase.SAME_AS_CURRENT_PASSWORD);
         }
 
-        phoneVerificationCodeRepository.deleteByPhoneNumber(normalizedPhoneNumber);
+        phoneVerificationCodeRepository.deletePasswordResetVerified(normalizedPhoneNumber);
+        user.updatePassword(passwordEncoder.encode(request.newPassword()));
+    }
+
+    @Transactional
+    public void changePassword(Long userId, UserPasswordChangeRequestDto request) {
+        User user = getUserOrThrow(userId);
+
+        if (passwordEncoder.matches(request.newPassword(), user.getPassword())) {
+            throw ApplicationException.from(UserErrorCase.SAME_AS_CURRENT_PASSWORD);
+        }
+
         user.updatePassword(passwordEncoder.encode(request.newPassword()));
     }
 

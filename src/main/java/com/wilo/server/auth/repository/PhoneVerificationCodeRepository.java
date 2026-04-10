@@ -12,6 +12,8 @@ public class PhoneVerificationCodeRepository {
 
     private static final String KEY_PREFIX = "auth:phone-verification:";
     private static final long VERIFICATION_CODE_TTL_MINUTES = 3L;
+    private static final String PASSWORD_RESET_VERIFIED_KEY_PREFIX = "auth:password-reset-verified:";
+    private static final long PASSWORD_RESET_VERIFIED_TTL_MINUTES = 10L;
 
     private final RedisTemplate<String, Object> redisTemplate;
 
@@ -32,7 +34,25 @@ public class PhoneVerificationCodeRepository {
         redisTemplate.delete(createKey(phoneNumber));
     }
 
+    public void savePasswordResetVerified(String phoneNumber) {
+        redisTemplate.opsForValue()
+                .set(createPasswordResetVerifiedKey(phoneNumber), "true", PASSWORD_RESET_VERIFIED_TTL_MINUTES, TimeUnit.MINUTES);
+    }
+
+    public boolean isPasswordResetVerified(String phoneNumber) {
+        Object value = redisTemplate.opsForValue().get(createPasswordResetVerifiedKey(phoneNumber));
+        return value != null;
+    }
+
+    public void deletePasswordResetVerified(String phoneNumber) {
+        redisTemplate.delete(createPasswordResetVerifiedKey(phoneNumber));
+    }
+
     private String createKey(String phoneNumber) {
         return KEY_PREFIX + phoneNumber;
+    }
+
+    private String createPasswordResetVerifiedKey(String phoneNumber) {
+        return PASSWORD_RESET_VERIFIED_KEY_PREFIX + phoneNumber;
     }
 }
