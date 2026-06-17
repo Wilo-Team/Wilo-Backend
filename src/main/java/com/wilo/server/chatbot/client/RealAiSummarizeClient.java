@@ -45,8 +45,7 @@ public class RealAiSummarizeClient implements AiSummarizeClient {
 
                 .bodyToMono(AiSummarizeResponse.class)
 
-                // AI 명세 timeout = 60초
-                .timeout(Duration.ofSeconds(60))
+                .timeout(Duration.ofSeconds(45))
 
                 // retry 1회
                 .retryWhen(

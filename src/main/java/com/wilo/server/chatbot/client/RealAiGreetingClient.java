@@ -52,7 +52,7 @@ public class RealAiGreetingClient implements AiGreetingClient {
                                 .flatMap(body -> Mono.error(new ApplicationException(ChatbotErrorCase.AI_RESPONSE_INVALID)))
                 )
                 .bodyToMono(AiChatResponse.class)
-                .timeout(Duration.ofSeconds(35))
+                .timeout(Duration.ofSeconds(20))
                 .block();
 
         if (res == null) {

@@ -60,7 +60,7 @@ public class RealAiChatClient implements AiChatClient {
                                 })
                 )
                 .bodyToMono(AiChatResponse.class)
-                .timeout(Duration.ofSeconds(35))
+                .timeout(Duration.ofSeconds(20))
                 .block();
 
 

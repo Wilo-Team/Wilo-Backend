@@ -63,11 +63,7 @@ public class ChatMessageService {
 
         ChatMessage savedBot = chatMessageTxService.saveBotMessageWithSessionUpdate(sessionId, aiResult);
 
-        try {
-            chatSummaryService.summarizeIfNeeded(sessionId); // 후처리
-        } catch (Exception e) {
-            log.warn("요약 후처리 실패 sessionId={}", sessionId, e);
-        }
+        chatSummaryService.summarizeIfNeededAsync(sessionId); // 후처리
 
         return ChatMessageSendResponse.builder()
                 .sessionId(sessionId)
