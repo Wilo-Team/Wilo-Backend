@@ -20,7 +20,10 @@ public class LoggingAspect {
 
     @Before("execution(* com.wilo.server..service..*(..))")
     public void logBefore(JoinPoint joinPoint) {
-        log.info("[START] {}.{}() args = {}",
+        if (!log.isDebugEnabled()) {
+            return;
+        }
+        log.debug("[START] {}.{}() args = {}",
                 joinPoint.getSignature().getDeclaringTypeName(),
                 joinPoint.getSignature().getName(),
                 safeArgs(joinPoint)
@@ -29,7 +32,10 @@ public class LoggingAspect {
 
     @After("execution(* com.wilo.server..service..*(..))")
     public void logAfter(JoinPoint joinPoint) {
-        log.info("[ END ] {}.{}()",
+        if (!log.isDebugEnabled()) {
+            return;
+        }
+        log.debug("[ END ] {}.{}()",
                 joinPoint.getSignature().getDeclaringTypeName(),
                 joinPoint.getSignature().getName()
         );

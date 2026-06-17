@@ -18,11 +18,19 @@ public class ExecutionTimeAspect {
         Object result = joinPoint.proceed();
 
         long executionTime = System.currentTimeMillis() - start;
-        log.info("[API 실행 시간] {}ms - {}.{}",
-                executionTime,
-                joinPoint.getSignature().getDeclaringTypeName(),
-                joinPoint.getSignature().getName()
-        );
+        if (executionTime > 1000) {
+            log.warn("[SLOW API] {}ms - {}.{}",
+                    executionTime,
+                    joinPoint.getSignature().getDeclaringTypeName(),
+                    joinPoint.getSignature().getName()
+            );
+        } else {
+            log.debug("[API 실행 시간] {}ms - {}.{}",
+                    executionTime,
+                    joinPoint.getSignature().getDeclaringTypeName(),
+                    joinPoint.getSignature().getName()
+            );
+        }
 
         return result;
     }
