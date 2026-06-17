@@ -15,7 +15,15 @@ import org.hibernate.annotations.SQLRestriction;
 
 @Getter
 @Entity
-@Table(name = "community_posts")
+@Table(
+        name = "community_posts",
+        indexes = {
+                @Index(name = "idx_posts_created_id", columnList = "created_at,id"),
+                @Index(name = "idx_posts_category_created_id", columnList = "category,created_at,id"),
+                @Index(name = "idx_posts_like_created_id", columnList = "like_count,created_at,id"),
+                @Index(name = "idx_posts_user_created_id", columnList = "user_id,created_at,id")
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @SQLDelete(sql = "UPDATE community_posts SET deleted_at = now() WHERE id = ?")
 @SQLRestriction("deleted_at IS NULL")

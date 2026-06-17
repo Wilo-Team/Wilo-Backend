@@ -12,7 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -22,7 +21,6 @@ public class ChatGreetingService {
     private final ChatMessageTxService chatMessageTxService;
     private final ChatMessageRepository chatMessageRepository;
 
-    @Transactional
     public ChatGreetingResponse createOrGetGreeting(Long sessionId, String guestIdHeader) {
 
         Long userId = extractUserIdIfAuthenticated();

@@ -70,6 +70,10 @@ dependencies {
 	// WebClient
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 
+	// Flyway
+	implementation 'org.flywaydb:flyway-core'
+	implementation 'org.flywaydb:flyway-mysql'
+
 	// solapi(전화번호 인증)
 	implementation 'com.solapi:sdk:1.0.3'
 

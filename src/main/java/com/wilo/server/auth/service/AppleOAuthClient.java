@@ -18,11 +18,13 @@ import java.security.PublicKey;
 import java.security.interfaces.ECPrivateKey;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.RSAPublicKeySpec;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -44,6 +46,7 @@ public class AppleOAuthClient {
 
     private volatile Map<String, PublicKey> cachedPublicKeys = Map.of();
     private volatile long cachedAtMillis = 0L;
+    private final ReentrantLock jwksLock = new ReentrantLock();
 
     public AppleTokenExchangeResult exchangeAuthorizationCode(String authorizationCode) {
         validateAppleConfig();
@@ -64,6 +67,7 @@ public class AppleOAuthClient {
                     .body(BodyInserters.fromFormData(formData))
                     .retrieve()
                     .bodyToMono(JsonNode.class)
+                    .timeout(Duration.ofSeconds(10))
                     .block();
 
             if (response == null) {
@@ -166,13 +170,15 @@ public class AppleOAuthClient {
         return refreshedKey;
     }
 
-    private synchronized void refreshPublicKeys() {
+    private void refreshPublicKeys() {
+        jwksLock.lock();
         try {
             WebClient webClient = webClientBuilder.build();
             JsonNode response = webClient.get()
                     .uri(properties.getKeysUri())
                     .retrieve()
                     .bodyToMono(JsonNode.class)
+                    .timeout(Duration.ofSeconds(10))
                     .block();
 
             if (response == null || !response.has("keys")) {
@@ -205,6 +211,8 @@ public class AppleOAuthClient {
             throw e;
         } catch (Exception e) {
             throw new ApplicationException(AuthErrorCase.APPLE_ACCESS_TOKEN_INVALID, e);
+        } finally {
+            jwksLock.unlock();
         }
     }
 
@@ -225,6 +233,7 @@ public class AppleOAuthClient {
                     .body(BodyInserters.fromFormData(formData))
                     .retrieve()
                     .toBodilessEntity()
+                    .timeout(Duration.ofSeconds(10))
                     .block();
         } catch (Exception e) {
             throw new ApplicationException(AuthErrorCase.APPLE_TOKEN_REVOKE_FAILED, e);

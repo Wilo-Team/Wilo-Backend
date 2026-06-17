@@ -9,6 +9,7 @@ COPY build/libs/*.jar app.jar
 
 # 타임존 설정
 ENV TZ=Asia/Seoul
+ENV JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError"
 RUN apk add --no-cache tzdata && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
     echo $TZ > /etc/timezone

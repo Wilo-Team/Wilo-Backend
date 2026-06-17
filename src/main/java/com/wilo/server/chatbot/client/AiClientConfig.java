@@ -19,7 +19,7 @@ public class AiClientConfig {
     ) {
         HttpClient httpClient = HttpClient.create()
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 5_000)
-                .responseTimeout(Duration.ofSeconds(30));
+                .responseTimeout(Duration.ofSeconds(20));
 
         return WebClient.builder()
                 .baseUrl(baseUrl)

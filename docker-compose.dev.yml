@@ -6,6 +6,8 @@ services:
     image: mysql:8.0
     container_name: wilo-mysql-dev
     restart: unless-stopped
+    cpus: "0.75"
+    mem_limit: 768m
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: wilo_db_dev
@@ -18,11 +20,12 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-time-zone=+09:00
+      - --max-connections=40
     networks:
       - wilo-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 5
 
@@ -31,6 +34,8 @@ services:
     image: redis:7.2-alpine
     container_name: wilo-redis-dev
     restart: unless-stopped
+    cpus: "0.25"
+    mem_limit: 192m
     ports:
       - "6392:6379"  # 외부 포트 6392로 노출 (컨테이너 내부는 6379)
     volumes:
@@ -39,7 +44,7 @@ services:
       - wilo-network
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
+      interval: 30s
       timeout: 5s
       retries: 5
     # 개발 환경 Redis는 메모리 제한을 더 작게 설정
@@ -50,10 +55,13 @@ services:
     image: ${DOCKER_USERNAME}/wilo:dev-latest
     container_name: wilo-app-dev
     restart: unless-stopped
+    cpus: "0.75"
+    mem_limit: 768m
     ports:
       - "8092:8080"  # 개발 서버는 8092 포트로 외부 노출
     environment:
       TZ: Asia/Seoul
+      JAVA_TOOL_OPTIONS: "-XX:MaxRAMPercentage=60 -XX:+ExitOnOutOfMemoryError"
       SPRING_PROFILES_ACTIVE: dev
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-dev:3306/wilo_db_dev?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
       SPRING_DATASOURCE_USERNAME: root
@@ -83,6 +91,9 @@ services:
       NCP_SERVICE_ID: ${NCP_SERVICE_ID}
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
+      SPRING_FLYWAY_ENABLED: "true"
+      SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
+      SPRING_FLYWAY_BASELINE_VERSION: "2"
     volumes:
       - app_dev_logs:/app/logs
     depends_on:
@@ -93,11 +104,11 @@ services:
     networks:
       - wilo-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health || exit 1"]
-      interval: 10s
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health/liveness || exit 1"]
+      interval: 60s
       timeout: 10s
       retries: 3
-      start_period: 30s
+      start_period: 60s
 
 networks:
   wilo-network:

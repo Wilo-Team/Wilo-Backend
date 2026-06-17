@@ -75,7 +75,6 @@ public class AuthService {
         return issueAndSaveTokens(user.getId());
     }
 
-    @Transactional
     public TokenResponseDto loginWithAppleAndIssueToken(AppleLoginRequestDto request) {
         AppleOAuthClient.AppleTokenExchangeResult exchangeResult =
                 appleOAuthClient.exchangeAuthorizationCode(request.authorizationCode());
@@ -143,7 +142,6 @@ public class AuthService {
         refreshTokenRepository.deleteByUserId(userId);
     }
 
-    @Transactional
     public void withdrawAppleAccount(Long userId, AppleWithdrawRequestDto request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> ApplicationException.from(AuthErrorCase.UNAUTHORIZED));
@@ -153,7 +151,6 @@ public class AuthService {
         userRepository.delete(user);
     }
 
-    @Transactional
     public TokenResponseDto loginWithKakaoAndIssueToken(SocialLoginRequestDto request) {
         KakaoUserInfoResponseDto userInfo = kakaoOAuthClient.getUserInfo(request.accessToken());
 
@@ -170,7 +167,6 @@ public class AuthService {
         return issueAndSaveTokens(user.getId());
     }
 
-    @Transactional
     public TokenResponseDto loginWithNaverAndIssueToken(SocialLoginRequestDto request) {
         NaverUserInfoResponseDto userInfo = naverOAuthClient.getUserInfo(request.accessToken());
 
@@ -186,13 +182,11 @@ public class AuthService {
         return issueAndSaveTokens(user.getId());
     }
 
-    @Transactional
     public void sendPhoneVerificationCode(PhoneVerificationSendRequestDto request) {
         String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
         issuePhoneVerificationCode(normalizedPhoneNumber);
     }
 
-    @Transactional
     public void resendPhoneVerificationCode(PhoneVerificationSendRequestDto request) {
         String normalizedPhoneNumber = normalizePhoneNumber(request.phoneNumber());
         phoneVerificationCodeRepository.deleteByPhoneNumber(normalizedPhoneNumber);
