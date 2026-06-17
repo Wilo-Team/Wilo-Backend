@@ -136,7 +136,7 @@ jobs:
           fi
 
           echo "Waiting for $TARGET environment to be healthy..."
-          timeout=120
+          timeout=240
           elapsed=0
           healthy=false
 

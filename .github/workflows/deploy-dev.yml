@@ -104,7 +104,7 @@ jobs:
           docker-compose -f docker-compose.dev.yml --env-file .env.dev up -d app-dev
 
           echo "Waiting for development application to be healthy..."
-          timeout=120
+          timeout=240
           elapsed=0
           healthy=false
 
