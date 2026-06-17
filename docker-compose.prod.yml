@@ -83,6 +83,7 @@ services:
       APPLE_PRIVATE_KEY: ${APPLE_PRIVATE_KEY:-}
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
+      SERVER_PORT: "8080"
       SPRING_FLYWAY_ENABLED: "true"
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       SPRING_FLYWAY_BASELINE_VERSION: "2"
@@ -97,7 +98,7 @@ services:
       - wilo-network
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health/liveness || exit 1"]
-      interval: 60s
+      interval: 20s
       timeout: 10s
       retries: 3
       start_period: 60s
@@ -139,6 +140,7 @@ services:
       NCP_SERVICE_ID: ${NCP_SERVICE_ID}
       SENTRY_DSN: ${SENTRY_DSN}
       SENTRY_AUTH_TOKEN: ${SENTRY_AUTH_TOKEN}
+      SERVER_PORT: "8080"
       SPRING_FLYWAY_ENABLED: "true"
       SPRING_FLYWAY_BASELINE_ON_MIGRATE: "true"
       SPRING_FLYWAY_BASELINE_VERSION: "2"
@@ -153,7 +155,7 @@ services:
       - wilo-network
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:8080/actuator/health/liveness || exit 1"]
-      interval: 60s
+      interval: 20s
       timeout: 10s
       retries: 3
       start_period: 60s
