@@ -56,7 +56,6 @@ public class UserService {
         return UserResponseDto.from(user);
     }
 
-    @Transactional
     public String updateProfileImage(Long userId, MultipartFile image) {
         if (image == null || image.isEmpty()) {
             throw ApplicationException.from(FileErrorCase.FILE_UPLOAD_FAILED);
@@ -68,6 +67,7 @@ public class UserService {
         String uploadedImageUrl = fileService.uploadFileToS3(image);
 
         user.updateProfileImageUrl(uploadedImageUrl);
+        userRepository.save(user);
 
         if (previousImageUrl != null && !previousImageUrl.isBlank() && !previousImageUrl.equals(uploadedImageUrl)) {
             try {

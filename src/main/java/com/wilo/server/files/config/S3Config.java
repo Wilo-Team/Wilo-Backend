@@ -2,6 +2,7 @@ package com.wilo.server.files.config;
 
 import com.amazonaws.auth.AWSStaticCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
+import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.s3.AmazonS3Client;
 import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,9 +21,17 @@ public class S3Config {
     @Bean
     public AmazonS3Client amazonS3Client() {
         BasicAWSCredentials basicAWSCredentials = new BasicAWSCredentials(accessKey, secretKey);
+        ClientConfiguration clientConfiguration = new ClientConfiguration()
+                .withConnectionTimeout(5_000)
+                .withSocketTimeout(10_000)
+                .withRequestTimeout(15_000)
+                .withClientExecutionTimeout(20_000)
+                .withMaxConnections(20);
+
         return (AmazonS3Client) AmazonS3ClientBuilder.standard()
                 .withRegion(region)
                 .withCredentials(new AWSStaticCredentialsProvider(basicAWSCredentials))
+                .withClientConfiguration(clientConfiguration)
                 .build();
     }
 }
