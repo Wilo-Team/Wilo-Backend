@@ -5,6 +5,7 @@ import com.wilo.server.auth.error.AuthErrorCase;
 import com.wilo.server.global.exception.ApplicationException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
@@ -14,6 +15,7 @@ import javax.crypto.spec.SecretKeySpec;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestClient;
@@ -50,7 +52,10 @@ public class NcpSensSmsService {
         );
 
         try {
-            RestClient.create(SENS_BASE_URL)
+            RestClient.builder()
+                    .baseUrl(SENS_BASE_URL)
+                    .requestFactory(requestFactory())
+                    .build()
                     .post()
                     .uri(requestPath)
                     .contentType(MediaType.APPLICATION_JSON)
@@ -67,6 +72,13 @@ public class NcpSensSmsService {
             log.warn("NCP SENS request failed. message={}", e.getMessage());
             throw ApplicationException.from(AuthErrorCase.SMS_SEND_FAILED);
         }
+    }
+
+    private SimpleClientHttpRequestFactory requestFactory() {
+        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
+        factory.setConnectTimeout(Duration.ofSeconds(5));
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        return factory;
     }
 
     private void validateConfiguration() {
