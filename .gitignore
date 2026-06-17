@@ -43,3 +43,6 @@ application-prod.yml
 
 .env
 **/db/migration/
+!src/main/resources/db/migration/
+src/main/resources/db/migration/*
+!src/main/resources/db/migration/V3__add_chatbot_indexes.sql
